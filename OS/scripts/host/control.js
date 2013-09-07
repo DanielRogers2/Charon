@@ -21,19 +21,21 @@
 //
 function hostInit()
 {
-	// Get a global reference to the canvas.  TODO: Move this stuff into a Display Device Driver, maybe?
-	_Canvas  = document.getElementById('display');
+    // Get a global reference to the canvas.  TODO: Move this stuff into a Display Device Driver, maybe?
+    _Canvas  = document.getElementById('display');
 
-	// Get a global reference to the drawing context.
-	_DrawingContext = _Canvas.getContext('2d');
+    // Get a global reference to the drawing context.
+    _DrawingContext = _Canvas.getContext('2d');
 
-	// Enable the added-in canvas text functions (see canvastext.js for provenance and details).
-	CanvasTextFunctions.enable(_DrawingContext);   // TODO: Text functionality is now built in to the HTML5 canvas. Consider using that instead.
+    // Enable the added-in canvas text functions (see canvastext.js for provenance and details).
+    //CanvasTextFunctions.enable(_DrawingContext); 
+    _DrawingContext.font         = "12px Courier";
+    //_DrawingContext.textBaseline = "top";
+    
+    // Clear the log text box.
+    document.getElementById("taLog").value="";
 
-	// Clear the log text box.
-	document.getElementById("taLog").value="";
-
-	// Set focus on the start button.
+    // Set focus on the start button.
    document.getElementById("btnStartOS").focus();
 
    // Check for our testing and enrichment core.

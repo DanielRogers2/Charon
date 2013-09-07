@@ -79,7 +79,55 @@ function shellInit() {
     sc.description = "<string> - Sets the prompt.";
     sc.function = shellPrompt;
     this.commandList[this.commandList.length] = sc;
+    
+    //date
+    sc = new ShellCommand();
+    sc.command = "date";
+    sc.description = " - Displays the current date";
+    
+    sc.function = function shellDate() {
+        var months = ['January',    'February', 'March',    'April', 
+                      'May',        'June',         'July',     'August',
+                      'September', 'October',   'November', 'December'];
+        
+        var dotw   = ['Sunday',   'Monday', 'Tuesday', 'Wednesday', 
+                      'Thursday', 'Friday', 'Saturday'];
+        //for 1st, 2nd, 3rd, etc.
+        var ending = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th']
+        
+        var date   = new Date();
+        var month  = months[date.getMonth()];
+        var wkday  = dotw[date.getDay()];
+        
+        var day    = date.getDate();
+        var end    = ending[day % 10];
+        //11 - 13 use 'th' rather than 11st
+        if( Math.floor(day / 10) == 1) {
+            end = 'th';
+        }
+        
+        //Dayofweek, Month DAYxx YEAR 
+        _StdOut.putText(wkday + ", " + month + " " + day + end + " - " + date.getFullYear());
+        //previous + at HH:MM:SS (24hr time)
+        _StdOut.putText(" at " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds());
+        
+        //you could also do
+        //_StdOut.putText(date.toString())
+        //but mine is cooler
+    };
+    this.commandList[this.commandList.length] = sc;
 
+    //whereami 
+    sc = new ShellCommand();
+    sc.command = "whereami";
+    sc.description = " - Shows the current location of the system";
+    
+    sc.function = function shellLocation() {
+        //yuca mountain
+        _StdOut.putText("36 degrees 56' 25\" N, 116 degrees 29' 06\" W");
+    };
+    this.commandList[this.commandList.length] = sc;
+    
     // processes - list the running processes and their IDs
     // kill <id> - kills the specified process id.
 
@@ -150,7 +198,7 @@ function shellParseInput(buffer)
     var retVal = new UserCommand();
 
     // 1. Remove leading and trailing spaces.
-    buffer = trim(buffer);
+    buffer = buffer.trim();
 
     // 2. Lower-case it.
     buffer = buffer.toLowerCase();

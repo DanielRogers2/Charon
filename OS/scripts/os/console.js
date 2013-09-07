@@ -12,7 +12,7 @@ function CLIconsole() {
     this.CurrentFont      = _DefaultFontFamily;
     this.CurrentFontSize  = _DefaultFontSize;
     this.CurrentXPosition = 0;
-    this.CurrentYPosition = _DefaultFontSize;
+    this.CurrentYPosition = this.CurrentFontSize;
     this.buffer = "";
     
     // Methods
@@ -35,7 +35,8 @@ function CLIconsole() {
        {
            // Get the next character from the kernel input queue.
            var chr = _KernelInputQueue.dequeue();
-           // Check to see if it's "special" (enter or ctrl-c) or "normal" (anything else that the keyboard device driver gave us).
+           // Check to see if it's "special" (enter or ctrl-c) 
+           //   or "normal" (anything else that the keyboard device driver gave us).
            if (chr == String.fromCharCode(13))  //     Enter key
            {
                // The enter key marks the end of a console command, so ...
@@ -43,6 +44,42 @@ function CLIconsole() {
                _OsShell.handleInput(this.buffer);
                // ... and reset our buffer.
                this.buffer = "";
+           }
+           else if (chr == String.fromCharCode(8) &&
+                   this.buffer.length > 0         &&
+                   (this.CurrentXPosition > 0      ||
+                    this.CurrentYPosition > 0) ) //backspace
+           {
+               //get last character
+               var lc = this.buffer[this.buffer.length-1];
+               var charwidth = _DrawingContext.measureText(lc).width;
+               
+               if(LOGGING === true) {
+                   console.log("erasing size: (" + charwidth + ")");
+               }
+
+               //move back current position
+               this.CurrentXPosition -= charwidth;
+               
+               //see if we need to move back a line
+               if(this.CurrentXPosition < 0) {
+                   //handle if _Canvas.width not a multiple of charwidth
+                   var charsprln = Math.floor(_Canvas.width / charwidth) - 1;
+                   
+                   //set position to end of previous line
+                   this.CurrentXPosition = charsprln * charwidth;
+                   this.CurrentYPosition -= (_DefaultFontSize + _FontHeightMargin);
+               }
+               
+               //clear character box from canvas
+               _DrawingContext.clearRect(this.CurrentXPosition
+                                         , this.CurrentYPosition - _DefaultFontSize
+                                         , this.CurrentXPosition + charwidth
+                                         //make sure to clear out letters below the line like p,j
+                                         , this.CurrentYPosition + _FontHeightMargin);
+               
+               //remove last character from buffer
+               this.buffer = this.buffer.slice(0, this.buffer.length - 1); 
            }
            // TODO: Write a case for Ctrl-C.
            else
@@ -53,6 +90,10 @@ function CLIconsole() {
                // ... and add it to our buffer.
                this.buffer += chr;
            }
+           
+           if(LOGGING === true) {
+               console.log("buffer: " + this.buffer);
+           }
        }
     };
 
@@ -62,19 +103,61 @@ function CLIconsole() {
        // between the two.  So rather than be like PHP and write two (or more) functions that
        // do the same thing, thereby encouraging confusion and decreasing readability, I
        // decided to write one function and use the term "text" to connote string or char.
+       if(LOGGING === true) {
+           console.log("handling: " + text);
+       }
+       
        if (text !== "")
        {
+           //check where X position of text end will be
+           var offset = _DrawingContext.measureText(text).width;
+           if(this.CurrentXPosition + offset > _Canvas.width) {
+               //wrap line
+               this.advanceLine();
+           }
+           
            // Draw the text at the current X and Y coordinates.
-           _DrawingContext.drawText(this.CurrentFont, this.CurrentFontSize, this.CurrentXPosition, this.CurrentYPosition, text);
-         // Move the current X position.
-           var offset = _DrawingContext.measureText(this.CurrentFont, this.CurrentFontSize, text);
+           _DrawingContext.fillText(text, this.CurrentXPosition, this.CurrentYPosition);
+           // Move the current X position.
            this.CurrentXPosition = this.CurrentXPosition + offset;
+           
+           if(LOGGING === true) {
+               console.log("moved x,y to: (" + this.CurrentXPosition + ", " + this.CurrentYPosition + ")");
+           }
        }
     };
 
     this.advanceLine = function() {
        this.CurrentXPosition = 0;
        this.CurrentYPosition += _DefaultFontSize + _FontHeightMargin;
-       // TODO: Handle scrolling.
+
+       //clip top line of canvas and redraw
+       if(this.CurrentYPosition >= _Canvas.height) {
+           //buffer canvas to hold old canvas during canvas clear
+           var backBuffer = document.createElement('canvas');
+           backBuffer.height = _Canvas.height;
+           backBuffer.width  = _Canvas.width;
+
+           //clip one line from top
+           var clip = (_DefaultFontSize + _FontHeightMargin);
+           var bufferDraw = backBuffer.getContext('2d');
+           
+           if(LOGGING === true) {
+               console.log("clip size: " + clip);
+           }
+           //write image to buffer canvas
+           //you can also clip images, but this was resulting in type errors
+           //this was easier
+           bufferDraw.drawImage(_Canvas, 0, -clip);
+           
+           //wipe the canvas
+           this.clearScreen();
+           
+           //restore canvas with clipped data
+           _DrawingContext.drawImage(backBuffer, 0, 0);
+           //we didn't advance the cursor really, so reset it. 
+           //Otherwise we'll keep on clearing the screen (which is bad)
+           this.CurrentYPosition -= clip;
+       }
     };
 }
