@@ -1,10 +1,10 @@
 /* ------------
    Shell.js
-   
+
    The OS Shell - The "command line interface" (CLI) for the console.
    ------------ */
 
-// TODO: Write a base class / prototype for system services and let Shell inherit from it.
+//TODO: Write a base class / prototype for system services and let Shell inherit from it.
 
 function Shell() {
     // Properties
@@ -24,110 +24,188 @@ function shellInit() {
     //
     // Load the command list.
 
-    // ver
+    /*
+     * ver
+     */ 
     sc = new ShellCommand();
     sc.command = "ver";
     sc.description = "- Displays the current version data.";
-    sc.function = shellVer;
+    sc.function = function shellVer() {
+        _StdIn.putText(APP_NAME + " version " + APP_VERSION);
+    };
     this.commandList[this.commandList.length] = sc;
-    
-    // help
+
+    /*
+     * help
+     */ 
     sc = new ShellCommand();
     sc.command = "help";
     sc.description = "- This is the help command. Seek help.";
-    sc.function = shellHelp;
+    sc.function = function shellHelp () {
+        _StdIn.putText("Commands:");
+        for (var i in _OsShell.commandList)
+        {
+            _StdIn.advanceLine();
+            _StdIn.putText("  " + _OsShell.commandList[i].command + " " + _OsShell.commandList[i].description);
+        }
+    };
     this.commandList[this.commandList.length] = sc;
-    
-    // shutdown
+
+    /*
+     * shutdown
+     */ 
     sc = new ShellCommand();
     sc.command = "shutdown";
     sc.description = "- Shuts down the virtual OS but leaves the underlying hardware simulation running.";
-    sc.function = shellShutdown;
+    sc.function = function shellShutdown () {
+        _StdIn.putText("Shutting down...");
+        // Call Kernel shutdown routine.
+        krnShutdown();   
+        // TODO: Stop the final prompt from being displayed.  If possible.  Not a high priority.  (Damn OCD!)
+    };
     this.commandList[this.commandList.length] = sc;
-
-    // cls
+   
+    /*
+     * cls
+     */ 
     sc = new ShellCommand();
     sc.command = "cls";
     sc.description = "- Clears the screen and resets the cursor position.";
-    sc.function = shellCls;
+    sc.function = function shellCls () {
+        _StdIn.clearScreen();
+        _StdIn.resetXY();
+    };
     this.commandList[this.commandList.length] = sc;
 
-    // man <topic>
+    /*
+     * man <topic>
+     */ 
     sc = new ShellCommand();
     sc.command = "man";
     sc.description = "<topic> - Displays the MANual page for <topic>.";
-    sc.function = shellMan;
+    sc.function = function shellMan (args) {
+        if (args.length > 0)
+        {
+            var topic = args[0];
+            switch (topic)
+            {
+            case "help": 
+                _StdIn.putText("Help displays a list of (hopefully) valid commands.");
+                break;
+            default:
+                _StdIn.putText("No manual entry for " + args[0] + ".");
+            }
+        }
+        else
+        {
+            _StdIn.putText("Usage: man <topic>  Please supply a topic.");
+        }
+    };
     this.commandList[this.commandList.length] = sc;
-    
-    // trace <on | off>
+
+    /*
+     * trace <on | off>
+     */ 
     sc = new ShellCommand();
     sc.command = "trace";
     sc.description = "<on | off> - Turns the OS trace on or off.";
-    sc.function = shellTrace;
+    sc.function = function shellTrace (args){
+        if (args.length > 0)
+        {
+            var setting = args[0];
+            switch (setting)
+            {
+            case "on": 
+                if (_Trace && _SarcasticMode)
+                {
+                    _StdIn.putText("Trace is already on, dumbass.");
+                }
+                else
+                {
+                    _Trace = true;
+                    _StdIn.putText("Trace ON");
+                }
+
+                break;
+            case "off": 
+                _Trace = false;
+                _StdIn.putText("Trace OFF");                
+                break;                
+            default:
+                _StdIn.putText("Invalid arguement.  Usage: trace <on | off>.");
+            }        
+        }
+        else
+        {
+            _StdIn.putText("Usage: trace <on | off>");
+        }
+    };
     this.commandList[this.commandList.length] = sc;
 
-    // rot13 <string>
+    /*
+     * rot13 <string>
+     */ 
     sc = new ShellCommand();
     sc.command = "rot13";
     sc.description = "<string> - Does rot13 obfuscation on <string>.";
-    sc.function = shellRot13;
+    sc.function = function shellRot13 (args) {
+        if (args.length > 0)
+        {
+            _StdIn.putText(args[0] + " = '" + rot13(args[0]) +"'");     // Requires Utils.js for rot13() function.
+        }
+        else
+        {
+            _StdIn.putText("Usage: rot13 <string>  Please supply a string.");
+        }
+    };
     this.commandList[this.commandList.length] = sc;
 
-    // prompt <string>
+    /*
+     * prompt <string>
+     */ 
     sc = new ShellCommand();
     sc.command = "prompt";
     sc.description = "<string> - Sets the prompt.";
-    sc.function = shellPrompt;
+    sc.function = function shellPrompt (args) {
+        if (args.length > 0)
+        {
+            _OsShell.promptStr = args[0];
+        }
+        else
+        {
+            _StdIn.putText("Usage: prompt <string>  Please supply a string.");
+        }
+    };
     this.commandList[this.commandList.length] = sc;
-    
-    //date
+
+    /*
+     * date
+     */
     sc = new ShellCommand();
     sc.command = "date";
     sc.description = " - Displays the current date";
-    
     sc.function = function shellDate() {
-        var months = ['January',    'February', 'March',    'April', 
-                      'May',        'June',         'July',     'August',
-                      'September', 'October',   'November', 'December'];
-        
-        var dotw   = ['Sunday',   'Monday', 'Tuesday', 'Wednesday', 
-                      'Thursday', 'Friday', 'Saturday'];
-        //for 1st, 2nd, 3rd, etc.
-        var ending = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th']
-        
-        var date   = new Date();
-        var month  = months[date.getMonth()];
-        var wkday  = dotw[date.getDay()];
-        
-        var day    = date.getDate();
-        var end    = ending[day % 10];
-        //11 - 13 use 'th' rather than 11st
-        if( Math.floor(day / 10) == 1) {
-            end = 'th';
-        }
-        
-        //Dayofweek, Month DAYxx YEAR 
-        _StdOut.putText(wkday + ", " + month + " " + day + end + " - " + date.getFullYear());
-        //previous + at HH:MM:SS (24hr time)
-        _StdOut.putText(" at " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds());
-        
+        //Dayofweek, Month dd, yyyy at hh:mm:ss
+        _StdOut.putText(_Clock.getDateString() + " at " + _Clock.getTimeString());
+
         //you could also do
         //_StdOut.putText(date.toString())
         //but mine is cooler
     };
     this.commandList[this.commandList.length] = sc;
 
-    //whereami 
+    /*
+     * whereami
+     */ 
     sc = new ShellCommand();
     sc.command = "whereami";
     sc.description = " - Shows the current location of the system";
-    
-    sc.function = function shellLocation() {
+    sc.function = function shellLocation () {
         //yuca mountain
         _StdOut.putText("36 degrees 56' 25\" N, 116 degrees 29' 06\" W");
     };
     this.commandList[this.commandList.length] = sc;
-    
+
     // processes - list the running processes and their IDs
     // kill <id> - kills the specified process id.
 
@@ -240,17 +318,8 @@ function shellExecute(fn, args)
     this.putPrompt();
 }
 
+//An "interior" or "private" class (prototype) used only inside Shell() (we hope).
 
-//
-// The rest of these functions ARE NOT part of the Shell "class" (prototype, more accurately), 
-// as they are not denoted in the constructor.  The idea is that you cannot execute them from
-// elsewhere as shell.xxx .  In a better world, and a more perfect JavaScript, we'd be
-// able to make then private.  (Actually, we can. have a look at Crockford's stuff and Resig's JavaScript Ninja cook.)
-//
-
-//
-// An "interior" or "private" class (prototype) used only inside Shell() (we hope).
-//
 function ShellCommand()     
 {
     // Properties
@@ -259,9 +328,9 @@ function ShellCommand()
     this.function = "";
 }
 
-//
-// Another "interior" or "private" class (prototype) used only inside Shell() (we hope).
-//
+
+//Another "interior" or "private" class (prototype) used only inside Shell() (we hope).
+
 function UserCommand()
 {
     // Properties
@@ -270,9 +339,9 @@ function UserCommand()
 }
 
 
-//
-// Shell Command Functions.  Again, not part of Shell() class per se', just called from there.
-//
+
+//Shell Command Functions.  Again, not part of Shell() class per se', just called from there.
+
 function shellInvalidCommand()
 {
     _StdIn.putText("Invalid Command. ");
@@ -296,116 +365,10 @@ function shellCurse()
 
 function shellApology()
 {
-   if (_SarcasticMode) {
-      _StdIn.putText("Okay. I forgive you. This time.");
-      _SarcasticMode = false;
-   } else {
-      _StdIn.putText("For what?");
-   }
-}
-
-function shellVer(args)
-{
-    _StdIn.putText(APP_NAME + " version " + APP_VERSION);    
-}
-
-function shellHelp(args)
-{
-    _StdIn.putText("Commands:");
-    for (var i in _OsShell.commandList)
-    {
-        _StdIn.advanceLine();
-        _StdIn.putText("  " + _OsShell.commandList[i].command + " " + _OsShell.commandList[i].description);
-    }    
-}
-
-function shellShutdown(args)
-{
-     _StdIn.putText("Shutting down...");
-     // Call Kernel shutdown routine.
-    krnShutdown();   
-    // TODO: Stop the final prompt from being displayed.  If possible.  Not a high priority.  (Damn OCD!)
-}
-
-function shellCls(args)
-{
-    _StdIn.clearScreen();
-    _StdIn.resetXY();
-}
-
-function shellMan(args)
-{
-    if (args.length > 0)
-    {
-        var topic = args[0];
-        switch (topic)
-        {
-            case "help": 
-                _StdIn.putText("Help displays a list of (hopefully) valid commands.");
-                break;
-            default:
-                _StdIn.putText("No manual entry for " + args[0] + ".");
-        }        
-    }
-    else
-    {
-        _StdIn.putText("Usage: man <topic>  Please supply a topic.");
-    }
-}
-
-function shellTrace(args)
-{
-    if (args.length > 0)
-    {
-        var setting = args[0];
-        switch (setting)
-        {
-            case "on": 
-                if (_Trace && _SarcasticMode)
-                {
-                    _StdIn.putText("Trace is already on, dumbass.");
-                }
-                else
-                {
-                    _Trace = true;
-                    _StdIn.putText("Trace ON");
-                }
-                
-                break;
-            case "off": 
-                _Trace = false;
-                _StdIn.putText("Trace OFF");                
-                break;                
-            default:
-                _StdIn.putText("Invalid arguement.  Usage: trace <on | off>.");
-        }        
-    }
-    else
-    {
-        _StdIn.putText("Usage: trace <on | off>");
-    }
-}
-
-function shellRot13(args)
-{
-    if (args.length > 0)
-    {
-        _StdIn.putText(args[0] + " = '" + rot13(args[0]) +"'");     // Requires Utils.js for rot13() function.
-    }
-    else
-    {
-        _StdIn.putText("Usage: rot13 <string>  Please supply a string.");
-    }
-}
-
-function shellPrompt(args)
-{
-    if (args.length > 0)
-    {
-        _OsShell.promptStr = args[0];
-    }
-    else
-    {
-        _StdIn.putText("Usage: prompt <string>  Please supply a string.");
+    if (_SarcasticMode) {
+        _StdIn.putText("Okay. I forgive you. This time.");
+        _SarcasticMode = false;
+    } else {
+        _StdIn.putText("For what?");
     }
 }

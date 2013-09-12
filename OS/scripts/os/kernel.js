@@ -22,7 +22,8 @@ function krnBootstrap()      // Page 8.
    _KernelBuffers = new Array();         // Buffers... for the kernel.
    _KernelInputQueue = new Queue();      // Where device input lands before being processed out somewhere.
    _Console = new CLIconsole();          // The command line interface / console I/O device.
-
+   _Clock = new Clock();
+   
    // Initialize the CLIconsole.
    _Console.init();
 

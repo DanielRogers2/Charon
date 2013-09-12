@@ -11,8 +11,8 @@
 //
 // Global CONSTANTS
 //
-var APP_NAME = "Charon";  // 'cause I was at a loss for a better name.
-var APP_VERSION = "0.01";   // What did you expect?
+var APP_NAME = "Charon";  //ferryman of the dead, appropriate for an OS written in JS
+var APP_VERSION = "0.01"; 
 
 var CPU_CLOCK_INTERVAL = 100;   // This is in ms, or milliseconds, so 1000 = 1 second.
 
@@ -20,8 +20,8 @@ var TIMER_IRQ = 0;  // Pages 23 (timer), 9 (interrupts), and 561 (interrupt prio
                     // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
 var KEYBOARD_IRQ = 1;  
 
-//turn on/off console logging
-var LOGGING = true;
+//turn on/off console DEBUG
+var DEBUG = true;
 
 
 //
@@ -54,6 +54,7 @@ var _StdOut = null;
 // UI
 var _Console = null;
 var _OsShell = null;
+var _Clock = null;
 
 // At least this OS is not trying to kill you. (Yet.)
 var _SarcasticMode = false;
