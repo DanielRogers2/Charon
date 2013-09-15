@@ -26,7 +26,7 @@ var CONSOLE_CANVASID = 0;
 var STATUS_CANVASID = 1;
 
 //turn on/off console DEBUG
-var DEBUG = true;
+var DEBUG = false;
 
 //
 // Global Variables

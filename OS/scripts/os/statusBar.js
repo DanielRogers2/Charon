@@ -28,7 +28,7 @@ function StatusBar (canvasID) {
     this.clock = new Clock();
 
     this.init = function (date) {
-        this.updateStatus("This is Ground Control, you've really made the grade.");
+        this.updateStatus("Take your protein pills!");
         this.updateTime(date);
     };
 
@@ -64,8 +64,10 @@ function StatusBar (canvasID) {
         }
 
         //queue up for our next timer update
-        _KernelTimedEventQueue.enqueue([this, this.updateTime]);
-        _KernelInterruptQueue.enqueue(new Interrupt(TIMER_IRQ, []));
+        var ir = new Interrupt(TIMER_IRQ, [this, this.updateTime]);
+        var delayedEvent = new DelayedInterrupt(ir, 500);
+        
+        _KernelTimedEvents.push(delayedEvent);
     };
 
     this.updateStatus = function (newStatus) {

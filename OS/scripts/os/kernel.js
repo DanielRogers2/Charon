@@ -19,12 +19,17 @@ function krnBootstrap()      // Page 8.
 
     // Initialize our global queues.
     _KernelInterruptQueue = new Queue();  // A (currently) non-priority queue for interrupt requests (IRQs).
-    _KernelTimedEventQueue = new Queue(); //A queue for handling functions that programs ask to occur
-                                          //    on a timer
+
+    // handles timout functions
+    var TimedComparator = function(a, b) {
+        return a.timeLeft == b.timeLeft ? 0 : a.timeLeft < b.timeLeft ? -1 : 1;
+    };
+    _KernelTimedEvents = new MinHeap(null, TimedComparator); 
+
     _KernelBuffers = new Array();         // Buffers... for the kernel.
     _KernelInputQueue = new Queue();      // Where device input lands before being processed out somewhere.
     _Console = new CLIconsole(CONSOLE_CANVASID); // The command line interface / console I/O device.
-                                                 //    tell it to draw to canvas 0, the console canvas
+    //    tell it to draw to canvas 0, the console canvas
     _StatusBar = new StatusBar(STATUS_CANVASID);
 
     // Initialize the CLIconsole.
@@ -39,14 +44,14 @@ function krnBootstrap()      // Page 8.
     this.krnInterruptVector = [];
 
     //timer into Interrupt Vector
-    this.krnInterruptVector[TIMER_IRQ] = function () {
-        krnTimerISR(); // Kernel built-in routine for timers (not the clock).
+    this.krnInterruptVector[TIMER_IRQ] = function (params) {
+        krnTimerISR(params); // Kernel built-in routine for timers (not the clock).
     };
 
     // Load the Keyboard Device Driver
     krnTrace("Loading the keyboard device driver.");
     krnKeyboardDriver = new DeviceDriverKeyboard();     // Construct it.  
-                                                        // TODO: Should that have a _global-style name?
+    // TODO: Should that have a _global-style name?
     krnKeyboardDriver.driverEntry();                    // Call the driverEntry() initialization routine.
     krnTrace(krnKeyboardDriver.status);
 
@@ -54,13 +59,13 @@ function krnBootstrap()      // Page 8.
         krnKeyboardDriver.isr(params);   // Kernel mode device driver
         _StdIn.handleInput();
     };
-    
+
     //load the Display Device Driver
     krnTrace("Loading the display driver");
     krnDisplayDriver = new DeviceDriverDisplay();
     krnDisplayDriver.driverEntry();
     krnTrace(krnDisplayDriver.status);
-    
+
     this.krnInterruptVector[DISPLAY_IRQ] = function (params) {
         krnDisplayDriver.isr(params);
     };
@@ -87,11 +92,14 @@ function krnShutdown()
     // ... Disable the Interrupts.
     krnTrace("Disabling the interrupts.");
     krnDisableInterrupts();
+    
     // 
     // Unload the Device Drivers?
     // More?
     //
     krnTrace("end shutdown OS");
+    
+    clearInterval(_hardwareClockID);
 }
 
 
@@ -101,27 +109,32 @@ function krnOnCPUClockPulse()
        This is NOT the same as a TIMER, which causes an interrupt and is handled like other interrupts.
        This, on the other hand, is the clock pulse from the hardware (or host) that tells the kernel 
        that it has to look for interrupts and process them if it finds any.                           */
+    if (_KernelTimedEvents.size() > 0) {
+        //decrease time
+        _KernelTimedEvents.decrement(CPU_CLOCK_INTERVAL);
+    }
 
     // Check for an interrupt, are any. Page 560
-    if (_KernelInterruptQueue.getSize() > 0)    
-    {
+    if (_KernelInterruptQueue.getSize() > 0) {
         // Process the first interrupt on the interrupt queue.
         // TODO: Implement a priority queue based on the IRQ number/id to enforce interrupt priority.
         var interrupt = _KernelInterruptQueue.dequeue();
         krnInterruptHandler(interrupt.irq, interrupt.params);
     }
-    else if (_CPU.isExecuting) // If there are no interrupts then run one CPU cycle if there is anything being processed.
-    {
+    //handle timed events
+    else if(_KernelTimedEvents.getMin().timeLeft <= 0) {
+        _KernelInterruptQueue.enqueue(_KernelTimedEvents.pop().interrupt);
+    }
+    // If there are no interrupts then run one CPU cycle if there is anything being processed.
+    else if (_CPU.isExecuting) {
         _CPU.cycle();
-    }    
-    else                       // If there are no interrupts and there is
-                               //   nothing being executed then just be idle.
-    {
+    }
+    // If there are no interrupts and there is
+    //   nothing being executed then just be idle.
+    else {
         krnTrace("Idle");
     }
 }
-
-
 
 //Interrupt Handling
 
@@ -157,24 +170,20 @@ function krnInterruptHandler(irq, params)    // This is the Interrupt Handler Ro
     }
 }
 
-function krnTimerISR()  // The built-in TIMER (not clock) Interrupt Service Routine 
-                        //  (as opposed to an ISR coming from a device driver).
+function krnTimerISR(params)  // The built-in TIMER (not clock) Interrupt Service Routine 
+//(as opposed to an ISR coming from a device driver).
 {
     // Check multiprogramming parameters and enforce quanta here. 
     //  Call the scheduler / context switch here if necessary.
+
     //Kernel can do more important things in the future, for now just execute timer events
-    if(!_KernelTimedEventQueue.isEmpty()) {
-        var params =_KernelTimedEventQueue.dequeue();
+    if(params.length == 2) {
         if(DEBUG == true) {
             console.log("executing timed: " + params);
         }
-        //execute event, give it clock so it can get time/date
-       params[1].call(params[0], new Date());
+        params[1].call(params[0], new Date());
     }
 }   
-
-
-
 
 //System Calls... that generate software interrupts via tha Application Programming
 //Interface library routines.
@@ -190,7 +199,6 @@ function krnTimerISR()  // The built-in TIMER (not clock) Interrupt Service Rout
 //- ReadFile
 //- WriteFile
 //- CloseFile
-
 
 
 //OS Utility Routines
@@ -218,6 +226,28 @@ function krnTrace(msg)
 function krnTrapError(msg)
 {
     hostLog("OS ERROR - TRAP: " + msg);
-    // TODO: Display error on console, perhaps in some sort of colored screen. (Perhaps blue?)
+    var crashImg = new Image();
+
+    crashImg.onload = function () {
+        _DrawingContexts[CONSOLE_CANVASID].drawImage(crashImg, 0, 0
+                , _Canvases[CONSOLE_CANVASID].width
+                , _Canvases[CONSOLE_CANVASID].height);
+        
+        var str = "Your circuit's dead, there's something wrong";
+        
+        _DrawingContexts[CONSOLE_CANVASID].fillStyle = 'white';
+        _DrawingContexts[CONSOLE_CANVASID].font = "18px Courier";
+        
+        var wid = _DrawingContexts[CONSOLE_CANVASID].measureText(str).width;
+        var xs = _Canvases[CONSOLE_CANVASID].width / 2 - wid / 2;
+        var ys = _Canvases[CONSOLE_CANVASID].height / 2;
+        
+        _DrawingContexts[CONSOLE_CANVASID].fillText(str, xs, ys);
+    };
+
+    //originally from 
+    //  http://www.fanpop.com/clubs/david-bowie/images/348938/title/bowie-wallpaper
+    crashImg.src = 'images/bowiesd.jpg';
+
     krnShutdown();
 }

@@ -7,11 +7,11 @@
    ---------------------------------- */
 
 DeviceDriverKeyboard.prototype = new DeviceDriver; // "Inherit" from prototype
-                                                    // DeviceDriver in
-                                                    // deviceDriver.js.
+// DeviceDriver in
+// deviceDriver.js.
 
 function DeviceDriverKeyboard() // Add or override specific attributes and
-                                // method pointers.
+// method pointers.
 {
     // "subclass"-specific attributes.
     // this.buffer = ""; // TODO: Do we need this?
@@ -77,7 +77,7 @@ function DeviceDriverKeyboard() // Add or override specific attributes and
         var chr = "";
         // Check to see if we even want to deal with the key that was pressed.
         if (((keyCode >= 65) && (keyCode <= 90)) || // A..Z
-        ((keyCode >= 97) && (keyCode <= 123))) // a..z
+                ((keyCode >= 97) && (keyCode <= 123))) // a..z
         {
             // Determine the character we want to display.  
 
@@ -104,8 +104,8 @@ function DeviceDriverKeyboard() // Add or override specific attributes and
             chr = String.fromCharCode(keyCode);
             _KernelInputQueue.enqueue(chr);
         } else if ((keyCode == 32) || // space
-        (keyCode == 13) || // enter
-        (keyCode == 8)) //backspace
+                (keyCode == 13) || // enter
+                (keyCode == 8)) //backspace
         {
             chr = String.fromCharCode(keyCode);
             _KernelInputQueue.enqueue(chr);
@@ -145,8 +145,13 @@ function DeviceDriverKeyboard() // Add or override specific attributes and
             this.capsToggle = !this.capsToggle;
         }
 
+        else if((keyCode == 16)) //shift
+        {
+            //do nothing
+        }
+
         else {
-            //osTrapError
+            krnTrapError("Invalid Key");
         }
     };
 }

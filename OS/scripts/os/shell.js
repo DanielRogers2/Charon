@@ -220,11 +220,51 @@ function shellInit() {
     sc.description = " - Set the status bar status message.";
     sc.action = function (args) {
         if (args.length > 0) {
-            _StatusBar.updateStatus(args[0]);
+            _StatusBar.updateStatus(args.join(" "));
         }
         else {
             _StdIn.putText("Usage: status <string>  Please supply a string.");
         }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Load a program
+     */
+    sc = new ShellCommand();
+    sc.command = 'load';
+    sc.description = ' - loads a program from the program entry';
+    sc.action = function () {
+        //just check valid hex for now
+        var rawProg = document.getElementById("taProgramInput").value;
+
+        //if not A-F, a-f, 0-9, or " " then it's not valid hex
+        var invExp = new RegExp("[^A-Fa-f0-9 \n]", "m");
+        var valExp = new RegExp("[A-Fa-f0-9]", "m");
+        
+        var invalid = invExp.test(rawProg);
+        var valid = valExp.test(rawProg);
+
+        if(!invalid && valid) {
+            _StdOut.putText("Loaded Program:");
+            _StdOut.advanceLine();
+            _StdOut.putText(rawProg);
+        }
+        else {
+            _StdOut.putText("Invalid Program!");
+        }
+
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * crash
+     */
+    sc = new ShellCommand();
+    sc.command = 'crash';
+    sc.description = ' - crashes';
+    sc.action = function () {
+        krnTrapError("forced crash");
     };
     this.commandList[this.commandList.length] = sc;
 
@@ -316,11 +356,12 @@ function shellInit() {
         _StdOut.putText('And there\'s nothing I can do."');
 
         //reset the timer so they don't deal with sluggish response times
-        _KernelTimedEventQueue.enqueue([null, function () {
+        var resetTimer = function () {
             clearInterval(_hardwareClockID); 
             _hardwareClockID = setInterval(hostClockPulse, CPU_CLOCK_INTERVAL); 
-        }]);
-        _KernelInterruptQueue.enqueue(new Interrupt(TIMER_IRQ, []));
+        };
+
+        _KernelInterruptQueue.enqueue(new Interrupt(TIMER_IRQ, [null, resetTimer]));
 
     };
     this.commandList[this.commandList.length] = sc;
