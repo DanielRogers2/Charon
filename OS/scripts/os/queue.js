@@ -22,7 +22,8 @@ function Queue()
     };
 
     this.enqueue = function(element) {
-        this.q.push(element);        
+        
+        this.q.push(element);       
     };
     
     this.dequeue = function() {

@@ -8,7 +8,7 @@
 
 function Shell() {
     // Properties
-    this.promptStr   = ">";
+    this.promptStr   = "$";
     this.commandList = [];
     this.curses      = "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]";
     this.apologies   = "[sorry]";
@@ -30,7 +30,7 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "ver";
     sc.description = "- Displays the current version data.";
-    sc.function = function shellVer() {
+    sc.action = function shellVer() {
         _StdIn.putText(APP_NAME + " version " + APP_VERSION);
     };
     this.commandList[this.commandList.length] = sc;
@@ -41,7 +41,7 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "help";
     sc.description = "- This is the help command. Seek help.";
-    sc.function = function shellHelp () {
+    sc.action = function shellHelp () {
         _StdIn.putText("Commands:");
         for (var i in _OsShell.commandList)
         {
@@ -57,21 +57,21 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "shutdown";
     sc.description = "- Shuts down the virtual OS but leaves the underlying hardware simulation running.";
-    sc.function = function shellShutdown () {
+    sc.action = function shellShutdown () {
         _StdIn.putText("Shutting down...");
         // Call Kernel shutdown routine.
         krnShutdown();   
         // TODO: Stop the final prompt from being displayed.  If possible.  Not a high priority.  (Damn OCD!)
     };
     this.commandList[this.commandList.length] = sc;
-   
+
     /*
      * cls
      */ 
     sc = new ShellCommand();
     sc.command = "cls";
     sc.description = "- Clears the screen and resets the cursor position.";
-    sc.function = function shellCls () {
+    sc.action = function shellCls () {
         _StdIn.clearScreen();
         _StdIn.resetXY();
     };
@@ -83,7 +83,7 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "man";
     sc.description = "<topic> - Displays the MANual page for <topic>.";
-    sc.function = function shellMan (args) {
+    sc.action = function shellMan (args) {
         if (args.length > 0)
         {
             var topic = args[0];
@@ -109,7 +109,7 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "trace";
     sc.description = "<on | off> - Turns the OS trace on or off.";
-    sc.function = function shellTrace (args){
+    sc.action = function shellTrace (args){
         if (args.length > 0)
         {
             var setting = args[0];
@@ -148,7 +148,7 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "rot13";
     sc.description = "<string> - Does rot13 obfuscation on <string>.";
-    sc.function = function shellRot13 (args) {
+    sc.action = function shellRot13 (args) {
         if (args.length > 0)
         {
             _StdIn.putText(args[0] + " = '" + rot13(args[0]) +"'");     // Requires Utils.js for rot13() function.
@@ -166,7 +166,7 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "prompt";
     sc.description = "<string> - Sets the prompt.";
-    sc.function = function shellPrompt (args) {
+    sc.action = function shellPrompt (args) {
         if (args.length > 0)
         {
             _OsShell.promptStr = args[0];
@@ -184,13 +184,19 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "date";
     sc.description = " - Displays the current date";
-    sc.function = function shellDate() {
+    sc.action = function shellDate() {
+        var date = new Date();
+        var clock = new Clock();
+
         //Dayofweek, Month dd, yyyy at hh:mm:ss
-        _StdOut.putText(_Clock.getDateString() + " at " + _Clock.getTimeString());
+        _StdOut.putText(clock.getDateString(date) + " at " + clock.getTimeString(date));
 
         //you could also do
         //_StdOut.putText(date.toString())
         //but mine is cooler
+
+        //_KernelTimedEventQueue.enqueue(onTick);
+        //_KernelInterruptQueue.enqueue(new Interrupt(TIMER_IRQ, []));
     };
     this.commandList[this.commandList.length] = sc;
 
@@ -200,9 +206,122 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "whereami";
     sc.description = " - Shows the current location of the system";
-    sc.function = function shellLocation () {
+    sc.action = function shellLocation () {
         //yuca mountain
         _StdOut.putText("36 degrees 56' 25\" N, 116 degrees 29' 06\" W");
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Set status message
+     */
+    sc = new ShellCommand();
+    sc.command = "status";
+    sc.description = " - Set the status bar status message.";
+    sc.action = function (args) {
+        if (args.length > 0) {
+            _StatusBar.updateStatus(args[0]);
+        }
+        else {
+            _StdIn.putText("Usage: status <string>  Please supply a string.");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * fun stuff
+     */
+    sc = new ShellCommand();
+    sc.command = "countdown";
+    sc.description = " - ????";
+    sc.action = function secret () {
+        //it's cooler if it scrolls slowly
+        clearInterval(_hardwareClockID);
+        _hardwareClockID = setInterval(hostClockPulse, 500);
+
+        _StdOut.putText("Ground Control to Major Tom");
+        _StdOut.advanceLine();
+        _StdOut.putText("Ground Control to Major Tom");
+        _StdOut.advanceLine();
+        _StdOut.putText("Take your protein pills and put your helmet on");
+        _StdOut.advanceLine();
+        _StdOut.advanceLine();
+        _StdOut.putText("Ground Control to Major Tom");
+        _StdOut.advanceLine();
+        _StdOut.putText("Commencing countdown, engines on");
+        _StdOut.advanceLine();
+        _StdOut.putText("Check ignition and may God's love be with you");
+        _StdOut.advanceLine();
+        _StdOut.advanceLine();
+        _StdOut.putText("Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two, One, Liftoff");
+        _StdOut.advanceLine();
+        _StdOut.advanceLine();
+        _StdOut.putText("This is Ground Control to Major Tom");
+        _StdOut.advanceLine();
+        _StdOut.putText("You've really made the grade");
+        _StdOut.advanceLine();
+        _StdOut.putText("And the papers want to know whose shirts you wear");
+        _StdOut.advanceLine();
+        _StdOut.putText("Now it's time to leave the capsule if you dare");
+        _StdOut.advanceLine();
+        _StdOut.advanceLine();
+        _StdOut.putText('"This is Major Tom to Ground Control');
+        _StdOut.advanceLine();
+        _StdOut.putText("I'm stepping through the door");
+        _StdOut.advanceLine();
+        _StdOut.putText("And I'm floating in a most peculiar way");
+        _StdOut.advanceLine();
+        _StdOut.putText("And the stars look very different today");
+        _StdOut.advanceLine();
+        _StdOut.advanceLine();
+        _StdOut.putText("For here");
+        _StdOut.advanceLine();
+        _StdOut.putText("Am I sitting in a tin can");
+        _StdOut.advanceLine();
+        _StdOut.putText("Far above the world");
+        _StdOut.advanceLine();
+        _StdOut.putText("Planet Earth is blue");
+        _StdOut.advanceLine();
+        _StdOut.putText("And there's nothing I can do");
+        _StdOut.advanceLine();
+        _StdOut.advanceLine();
+        _StdOut.putText("Though I'm past one hundred thousand miles");
+        _StdOut.advanceLine();
+        _StdOut.putText("I'm feeling very still");
+        _StdOut.advanceLine();
+        _StdOut.putText("And I think my spaceship knows which way to go");
+        _StdOut.advanceLine();
+        _StdOut.putText('Tell my wife I love her very much she knows"');
+        _StdOut.advanceLine();
+        _StdOut.advanceLine();
+        _StdOut.putText("Ground Control to Major Tom");
+        _StdOut.advanceLine();
+        _StdOut.putText("Your circuit's dead, there's something wrong");
+        _StdOut.advanceLine();
+        _StdOut.putText("Can you hear me, Major Tom?");
+        _StdOut.advanceLine();
+        _StdOut.putText("Can you hear me, Major Tom?");
+        _StdOut.advanceLine();
+        _StdOut.putText("Can you hear me, Major Tom?");
+        _StdOut.advanceLine();
+        _StdOut.putText("Can you....");
+        _StdOut.advanceLine();
+        _StdOut.advanceLine();
+        _StdOut.putText('"Here am I floating round my tin can');
+        _StdOut.advanceLine();
+        _StdOut.putText("Far above the Moon");
+        _StdOut.advanceLine();
+        _StdOut.putText("Planet Earth is blue");
+        _StdOut.advanceLine();
+        _StdOut.putText('And there\'s nothing I can do."');
+
+        //reset the timer so they don't deal with sluggish response times
+        _KernelTimedEventQueue.enqueue([null, function () {
+            clearInterval(_hardwareClockID); 
+            _hardwareClockID = setInterval(hostClockPulse, CPU_CLOCK_INTERVAL); 
+        }]);
+        _KernelInterruptQueue.enqueue(new Interrupt(TIMER_IRQ, []));
+
     };
     this.commandList[this.commandList.length] = sc;
 
@@ -242,7 +361,7 @@ function shellHandleInput(buffer)
         if (this.commandList[index].command === cmd)
         {
             found = true;
-            var fn = this.commandList[index].function;
+            var fn = this.commandList[index].action;
         }
         else
         {
@@ -325,7 +444,7 @@ function ShellCommand()
     // Properties
     this.command = "";
     this.description = "";
-    this.function = "";
+    this.action = "";
 }
 
 

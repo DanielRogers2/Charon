@@ -21,9 +21,11 @@
    <script type="text/javascript" src="scripts/os/interrupt.js"></script>
    <script type="text/javascript" src="scripts/os/console.js"></script>	
    <script type="text/javascript" src="scripts/os/deviceDriver.js"></script>
+   <script type="text/javascript" src="scripts/os/deviceDriverDisplay.js"></script>
    <script type="text/javascript" src="scripts/os/deviceDriverKeyboard.js"></script>
    <script type="text/javascript" src="scripts/os/queue.js"></script>
    <script type="text/javascript" src="scripts/os/shell.js"></script>
+   <script type="text/javascript" src="scripts/os/statusBar.js"></script>
    <script type="text/javascript" src="scripts/os/kernel.js"></script>
 
    <!-- Other Routines -->
@@ -69,8 +71,14 @@
               height="500px"
               tabindex="3">
       </canvas>
+      
+      <canvas id="status"
+              width="500px"
+              height="20px"
+              tabindex="4">
+      </canvas>
    </div>
-
+   
    <div id="divLog" style="margin-left:520px;">
       <label>
          Log

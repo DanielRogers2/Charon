@@ -36,6 +36,12 @@ h3 {
 	cursor: default;
 }
 
+#status {
+	background-color:#DFDBC3;
+	border: 2px solid blue; 
+	cursor: default;
+}
+
 .normal_button {
 	width: 100px;
 }

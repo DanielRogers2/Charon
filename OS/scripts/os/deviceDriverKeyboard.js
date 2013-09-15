@@ -6,38 +6,41 @@
    The Kernel Keyboard Device Driver.
    ---------------------------------- */
 
-DeviceDriverKeyboard.prototype = new DeviceDriver;  // "Inherit" from prototype DeviceDriver in deviceDriver.js.
+DeviceDriverKeyboard.prototype = new DeviceDriver; // "Inherit" from prototype
+                                                    // DeviceDriver in
+                                                    // deviceDriver.js.
 
-function DeviceDriverKeyboard()                     // Add or override specific attributes and method pointers.
+function DeviceDriverKeyboard() // Add or override specific attributes and
+                                // method pointers.
 {
     // "subclass"-specific attributes.
-    // this.buffer = "";    // TODO: Do we need this?
+    // this.buffer = ""; // TODO: Do we need this?
     this.capsToggle = false;
 
-    //handle odd translations
+    // handle odd translations
     this.shiftTable = {
             //shifted numbers
-            49:33   //1->!
-            , 50:64 //2->@
-            , 51:35 //3->#
-            , 52:36 //4->$
-            , 53:37 //5->%
-            , 54:94 //6->^
-            , 55:38 //7->&
-            , 56:42 //8->*
-            , 57:40 //9->(
-            , 48:41 //0->)
-            , 44:60 //,-><
-            , 46:62 //.->>
-            , 47:63 ///->?
-            , 59:58 //;->:
-            , 39:34 //'->"
-            , 96:126//`->~
-            , 45:95 //-->_
-            , 61:43 //=->+
-            , 91:123//[->{
-            , 93:125//]->}
-            , 92:124//\-?|
+            49:33    // 1 -> !
+            , 50:64  // 2 -> @
+            , 51:35  // 3 -> #
+            , 52:36  // 4 -> $
+            , 53:37  // 5 -> %
+            , 54:94  // 6 -> ^
+            , 55:38  // 7 -> &
+            , 56:42  // 8 -> *
+            , 57:40  // 9 -> (
+            , 48:41  // 0 -> )
+            , 44:60  // , -> <
+            , 46:62  // . -> >
+            , 47:63  // / -> ?
+            , 59:58  // ; -> :
+            , 39:34  // ' -> "
+            , 96:126 // ` -> ~
+            , 45:95  // - -> _
+            , 61:43  // = -> +
+            , 91:123 // [ -> {
+            , 93:125 // ] -> }
+            , 92:124 // \ -> |
     };
     //handle non-ascii values for chrome
     this.chromeASCIITrans = {
@@ -55,15 +58,13 @@ function DeviceDriverKeyboard()                     // Add or override specific 
     };
 
     // Override the base method pointers.
-    this.driverEntry = function krnKbdDriverEntry()
-    {
+    this.driverEntry = function krnKbdDriverEntry() {
         // Initialization routine for this, the kernel-mode Keyboard Device Driver.
         this.status = "loaded";
         // More?
     };
 
-    this.isr = function krnKbdDispatchKeyPress(params)
-    {
+    this.isr = function krnKbdDispatchKeyPress(params) {
         // Parse the params.    TODO: Check that they are valid and osTrapError if not.
         var keyCode = params[0];
         var isShifted = params[1];
@@ -75,8 +76,8 @@ function DeviceDriverKeyboard()                     // Add or override specific 
         krnTrace("Key code:" + keyCode + " shifted:" + isShifted);
         var chr = "";
         // Check to see if we even want to deal with the key that was pressed.
-        if ( ((keyCode >= 65) && (keyCode <= 90)) ||   // A..Z
-                ((keyCode >= 97) && (keyCode <= 123)) )   // a..z
+        if (((keyCode >= 65) && (keyCode <= 90)) || // A..Z
+        ((keyCode >= 97) && (keyCode <= 123))) // a..z
         {
             // Determine the character we want to display.  
 
@@ -88,42 +89,41 @@ function DeviceDriverKeyboard()                     // Add or override specific 
                 chr = String.fromCharCode(keyCode + 32);
             }
 
-            _KernelInputQueue.enqueue(chr);        
-        } 
-        
-        else if ((keyCode >= 48) && (keyCode <= 57))   // digits
+            _KernelInputQueue.enqueue(chr);
+        }
+
+        else if ((keyCode >= 48) && (keyCode <= 57)) // digits
         {
-            if(isShifted) {
+            if (isShifted) {
                 keyCode = this.shiftTable[keyCode];
-                if(DEBUG === true) {
+                if (DEBUG === true) {
                     console.log("shifted to " + keyCode);
                 }
             }
 
             chr = String.fromCharCode(keyCode);
             _KernelInputQueue.enqueue(chr);
-        }
-        else if ((keyCode == 32) ||   // space
-                (keyCode == 13)  ||   // enter
-                (keyCode == 8) )      //backspace
+        } else if ((keyCode == 32) || // space
+        (keyCode == 13) || // enter
+        (keyCode == 8)) //backspace
         {
             chr = String.fromCharCode(keyCode);
-            _KernelInputQueue.enqueue(chr); 
+            _KernelInputQueue.enqueue(chr);
         }
-        
+
         else if ((keyCode >= 186) && (keyCode <= 222)) //; to '
         {
             //handle Chrome not mapping ; to ' as ASCII
             keyCode = this.chromeASCIITrans[keyCode];
-            if(DEBUG === true) {
+            if (DEBUG === true) {
                 console.log("translated to " + keyCode);
             }
-            
-            if(isShifted) {
+
+            if (isShifted) {
                 //check for < to "
                 keyCode = this.shiftTable[keyCode];
-                
-                if(DEBUG === true) {
+
+                if (DEBUG === true) {
                     console.log("shifted to " + keyCode);
                 }
             }
@@ -131,12 +131,20 @@ function DeviceDriverKeyboard()                     // Add or override specific 
             chr = String.fromCharCode(keyCode);
             _KernelInputQueue.enqueue(chr);
         }
-        
+
+        else if ((keyCode == 38 || keyCode == 40)) //arrow keys
+        {
+            //no ASCII values for this, and the keyCodes would correspond to & and )
+            //use the raw code
+            chr = keyCode;
+            _KernelInputQueue.enqueue(chr);
+        }
+
         else if ((keyCode == 20)) //caps lock
         {
             this.capsToggle = !this.capsToggle;
         }
-        
+
         else {
             //osTrapError
         }

@@ -1,59 +1,83 @@
 /* ------------
    Kernel.js
-   
+
    Requires globals.js
-   
+
    Routines for the Operating System, NOT the host.
-   
+
    This code references page numbers in the text book: 
    Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
    ------------ */
 
 
-//
-// OS Startup and Shutdown Routines   
-//
+
+//OS Startup and Shutdown Routines   
+
 function krnBootstrap()      // Page 8.
 {
-   hostLog("bootstrap", "host");  // Use hostLog because we ALWAYS want this, even if _Trace is off.
+    hostLog("bootstrap", "host");  // Use hostLog because we ALWAYS want this, even if _Trace is off.
 
-   // Initialize our global queues.
-   _KernelInterruptQueue = new Queue();  // A (currently) non-priority queue for interrupt requests (IRQs).
-   _KernelBuffers = new Array();         // Buffers... for the kernel.
-   _KernelInputQueue = new Queue();      // Where device input lands before being processed out somewhere.
-   _Console = new CLIconsole();          // The command line interface / console I/O device.
-   _Clock = new Clock();
-   
-   // Initialize the CLIconsole.
-   _Console.init();
+    // Initialize our global queues.
+    _KernelInterruptQueue = new Queue();  // A (currently) non-priority queue for interrupt requests (IRQs).
+    _KernelTimedEventQueue = new Queue(); //A queue for handling functions that programs ask to occur
+                                          //    on a timer
+    _KernelBuffers = new Array();         // Buffers... for the kernel.
+    _KernelInputQueue = new Queue();      // Where device input lands before being processed out somewhere.
+    _Console = new CLIconsole(CONSOLE_CANVASID); // The command line interface / console I/O device.
+                                                 //    tell it to draw to canvas 0, the console canvas
+    _StatusBar = new StatusBar(STATUS_CANVASID);
 
-   // Initialize standard input and output to the _Console.
-   _StdIn  = _Console;
-   _StdOut = _Console;
+    // Initialize the CLIconsole.
+    _Console.init();
+    _StatusBar.init(new Date());
 
-   // Load the Keyboard Device Driver
-   krnTrace("Loading the keyboard device driver.");
-   krnKeyboardDriver = new DeviceDriverKeyboard();     // Construct it.  TODO: Should that have a _global-style name?
-   krnKeyboardDriver.driverEntry();                    // Call the driverEntry() initialization routine.
-   krnTrace(krnKeyboardDriver.status);
+    // Initialize standard input and output to the _Console.
+    _StdIn  = _Console;
+    _StdOut = _Console;
 
-   //
-   // ... more?
-   //
+    //setting up interrupt handlers
+    this.krnInterruptVector = [];
 
-   // Enable the OS Interrupts.  (Not the CPU clock interrupt, as that is done in the hardware sim.)
-   krnTrace("Enabling the interrupts.");
-   krnEnableInterrupts();
+    //timer into Interrupt Vector
+    this.krnInterruptVector[TIMER_IRQ] = function () {
+        krnTimerISR(); // Kernel built-in routine for timers (not the clock).
+    };
 
-   // Launch the shell.
-   krnTrace("Creating and Launching the shell.");
-   _OsShell = new Shell();
-   _OsShell.init();
+    // Load the Keyboard Device Driver
+    krnTrace("Loading the keyboard device driver.");
+    krnKeyboardDriver = new DeviceDriverKeyboard();     // Construct it.  
+                                                        // TODO: Should that have a _global-style name?
+    krnKeyboardDriver.driverEntry();                    // Call the driverEntry() initialization routine.
+    krnTrace(krnKeyboardDriver.status);
 
-   // Finally, initiate testing.
-   if (_GLaDOS) {
-      _GLaDOS.afterStartup();
-   }
+    this.krnInterruptVector[KEYBOARD_IRQ] = function (params) {
+        krnKeyboardDriver.isr(params);   // Kernel mode device driver
+        _StdIn.handleInput();
+    };
+    
+    //load the Display Device Driver
+    krnTrace("Loading the display driver");
+    krnDisplayDriver = new DeviceDriverDisplay();
+    krnDisplayDriver.driverEntry();
+    krnTrace(krnDisplayDriver.status);
+    
+    this.krnInterruptVector[DISPLAY_IRQ] = function (params) {
+        krnDisplayDriver.isr(params);
+    };
+
+    // Enable the OS Interrupts.  (Not the CPU clock interrupt, as that is done in the hardware sim.)
+    krnTrace("Enabling the interrupts.");
+    krnEnableInterrupts();
+
+    // Launch the shell.
+    krnTrace("Creating and Launching the shell.");
+    _OsShell = new Shell();
+    _OsShell.init();
+
+    // Finally, initiate testing.
+    if (_GLaDOS) {
+        _GLaDOS.afterStartup();
+    }
 }
 
 function krnShutdown()
@@ -90,16 +114,17 @@ function krnOnCPUClockPulse()
     {
         _CPU.cycle();
     }    
-    else                       // If there are no interrupts and there is nothing being executed then just be idle.
+    else                       // If there are no interrupts and there is
+                               //   nothing being executed then just be idle.
     {
-       krnTrace("Idle");
+        krnTrace("Idle");
     }
 }
 
 
-// 
-// Interrupt Handling
-// 
+
+//Interrupt Handling
+
 function krnEnableInterrupts()
 {
     // Keyboard
@@ -116,73 +141,80 @@ function krnDisableInterrupts()
 
 function krnInterruptHandler(irq, params)    // This is the Interrupt Handler Routine.  Pages 8 and 560.
 {
-    // Trace our entrance here so we can compute Interrupt Latency by analyzing the log file later on.  Page 766.
+    // Trace our entrance here so we can compute Interrupt Latency by analyzing the log file later on.
+    //  Page 766.
     krnTrace("Handling IRQ~" + irq);
 
     // Invoke the requested Interrupt Service Routine via Switch/Case rather than an Interrupt Vector.
-    // TODO: Consider using an Interrupt Vector in the future.
     // Note: There is no need to "dismiss" or acknowledge the interrupts in our design here.  
     //       Maybe the hardware simulation will grow to support/require that in the future.
-    switch (irq)
-    {
-        case TIMER_IRQ: 
-            krnTimerISR();                   // Kernel built-in routine for timers (not the clock).
-            break;
-        case KEYBOARD_IRQ: 
-            krnKeyboardDriver.isr(params);   // Kernel mode device driver
-            _StdIn.handleInput();
-            break;
-        default: 
-            krnTrapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
+    if(irq >= 0 && irq < this.krnInterruptVector.length) {
+        //handle interrupt
+        this.krnInterruptVector[irq](params);
+    }
+    else {
+        krnTrapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
     }
 }
 
-function krnTimerISR()  // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
+function krnTimerISR()  // The built-in TIMER (not clock) Interrupt Service Routine 
+                        //  (as opposed to an ISR coming from a device driver).
 {
-    // Check multiprogramming parameters and enforce quanta here. Call the scheduler / context switch here if necessary.
+    // Check multiprogramming parameters and enforce quanta here. 
+    //  Call the scheduler / context switch here if necessary.
+    //Kernel can do more important things in the future, for now just execute timer events
+    if(!_KernelTimedEventQueue.isEmpty()) {
+        var params =_KernelTimedEventQueue.dequeue();
+        if(DEBUG == true) {
+            console.log("executing timed: " + params);
+        }
+        //execute event, give it clock so it can get time/date
+       params[1].call(params[0], new Date());
+    }
 }   
 
 
 
-//
-// System Calls... that generate software interrupts via tha Application Programming Interface library routines.
-//
-// Some ideas:
-// - ReadConsole
-// - WriteConsole
-// - CreateProcess
-// - ExitProcess
-// - WaitForProcessToExit
-// - CreateFile
-// - OpenFile
-// - ReadFile
-// - WriteFile
-// - CloseFile
+
+//System Calls... that generate software interrupts via tha Application Programming
+//Interface library routines.
+
+//Some ideas:
+//- ReadConsole
+//- WriteConsole
+//- CreateProcess
+//- ExitProcess
+//- WaitForProcessToExit
+//- CreateFile
+//- OpenFile
+//- ReadFile
+//- WriteFile
+//- CloseFile
 
 
-//
-// OS Utility Routines
-//
+
+//OS Utility Routines
+
 function krnTrace(msg)
 {
-   // Check globals to see if trace is set ON.  If so, then (maybe) log the message. 
-   if (_Trace)
-   {
-      if (msg === "Idle")
-      {
-         // We can't log every idle clock pulse because it would lag the browser very quickly.
-         if (_OSclock % 10 == 0)  // Check the CPU_CLOCK_INTERVAL in globals.js for an 
-         {                        // idea of the tick rate and adjust this line accordingly.
+    // Check globals to see if trace is set ON.  If so, then (maybe) log the message. 
+    if (_Trace)
+    {
+        if (msg === "Idle")
+        {
+            // We can't log every idle clock pulse because it would lag the browser very quickly.
+            if (_OSclock % (1000 / CPU_CLOCK_INTERVAL) == 0)  // Check the CPU_CLOCK_INTERVAL in globals.js for an 
+            {                        // idea of the tick rate and adjust this line accordingly.
+                hostLog(msg, "OS");
+            }         
+        }
+        else
+        {
             hostLog(msg, "OS");
-         }         
-      }
-      else
-      {
-       hostLog(msg, "OS");
-      }
-   }
+        }
+    }
 }
-   
+
 function krnTrapError(msg)
 {
     hostLog("OS ERROR - TRAP: " + msg);

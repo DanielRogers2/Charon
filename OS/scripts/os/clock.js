@@ -17,8 +17,7 @@ function Clock () {
     /*
      * Get the time in 24hr format as hh:mm:ss
      */
-    this.getTimeString = function () {
-        var date   = new Date();
+    this.getTimeString = function (date) {
         var hr = date.getHours();
         var min = date.getMinutes();
         var sec = date.getSeconds();
@@ -39,8 +38,7 @@ function Clock () {
     /*
      * Get the current date in Weekday, Month dd, yyyy format
      */
-    this.getDateString = function () {
-        var date   = new Date();
+    this.getDateString = function (date) {
         var month  = this.months[date.getMonth()];
         var wkday  = this.dotw[date.getDay()];
 
@@ -53,5 +51,23 @@ function Clock () {
         }
 
         return wkday + ", " + month + " " + day + end + ", " + date.getFullYear();
+    };
+    
+    /*
+     * get a shortened date string
+     */
+    this.getShortDate = function (date) {
+        var month = date.getMonth();
+        var day = date.getDate();
+        
+        if(month < 10) {
+            month = "0" + month;
+        }
+        
+        if(day < 10) {
+            day = "0" + day;
+        }
+        
+        return date.getFullYear() + "-" + month + "-" + day;
     };
 }

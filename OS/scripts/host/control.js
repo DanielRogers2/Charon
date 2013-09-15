@@ -21,14 +21,25 @@
 
 function hostInit()
 {
+    _Canvases = [];
     // Get a global reference to the canvas.  TODO: Move this stuff into a Display Device Driver, maybe?
-    _Canvas  = document.getElementById('display');
-
+    _Canvases[_Canvases.length] = document.getElementById('display');
+    _Canvases[_Canvases.length] = document.getElementById('status');
+    
+    _DrawingContexts = [];
     // Get a global reference to the drawing context.
-    _DrawingContext = _Canvas.getContext('2d');
+    _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length].getContext('2d');
+    _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length].getContext('2d');
+    
+    
+    /*
+    _DrawingContext   = _Canvas.getContext('2d');
+    _StatusBarContext = _StatusBar.getContext('2d');
 
     // Using HTML5 text functions
-    _DrawingContext.font         = "12px Courier";
+    _DrawingContext.font   = _DefaultFontFamily;
+    _StatusBarContext.font = _DefaultFontFamily;
+    */
 
     // Clear the log text box.
     document.getElementById("taLog").value="";
