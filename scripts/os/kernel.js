@@ -92,13 +92,14 @@ function krnShutdown()
     // ... Disable the Interrupts.
     krnTrace("Disabling the interrupts.");
     krnDisableInterrupts();
-    
+
     // 
     // Unload the Device Drivers?
     // More?
     //
+
     krnTrace("end shutdown OS");
-    
+
     clearInterval(_hardwareClockID);
 }
 
@@ -226,28 +227,74 @@ function krnTrace(msg)
 function krnTrapError(msg)
 {
     hostLog("OS ERROR - TRAP: " + msg);
-    var crashImg = new Image();
 
-    crashImg.onload = function () {
-        _DrawingContexts[CONSOLE_CANVASID].drawImage(crashImg, 0, 0
-                , _Canvases[CONSOLE_CANVASID].width
-                , _Canvases[CONSOLE_CANVASID].height);
-        
-        var str = "Your circuit's dead, there's something wrong";
-        
-        _DrawingContexts[CONSOLE_CANVASID].fillStyle = 'white';
-        _DrawingContexts[CONSOLE_CANVASID].font = "18px Courier";
-        
-        var wid = _DrawingContexts[CONSOLE_CANVASID].measureText(str).width;
+    var textOut = function(str) {
+
+        var context = _DrawingContexts[CONSOLE_CANVASID];
+
+        context.strokeStyle = 'black';
+        context.fillStyle = 'white';
+        context.font = "18px Courier";
+
+        var wid = context.measureText(str).width;
         var xs = _Canvases[CONSOLE_CANVASID].width / 2 - wid / 2;
         var ys = _Canvases[CONSOLE_CANVASID].height / 2;
+
+        context.strokeText(str, xs, ys);
+        context.fillText(str, xs, ys);
         
-        _DrawingContexts[CONSOLE_CANVASID].fillText(str, xs, ys);
     };
 
-    //originally from 
-    //  http://www.fanpop.com/clubs/david-bowie/images/348938/title/bowie-wallpaper
-    crashImg.src = 'images/bowiesd.jpg';
+    if(msg == "BSOD") {
+        var crashImg = new Image();
+
+        crashImg.onload = function () {
+            _DrawingContexts[CONSOLE_CANVASID].drawImage(crashImg, 0, 0
+                    , _Canvases[CONSOLE_CANVASID].width
+                    , _Canvases[CONSOLE_CANVASID].height);
+
+            var str = "Your system's dead, there's something wrong";
+
+            textOut(str);
+        };
+
+        //originally from 
+        //  http://www.fanpop.com/clubs/david-bowie/images/348938/title/bowie-wallpaper
+        crashImg.src = 'images/bowiesd.jpg';
+    }
+    else {
+
+        var str = "SYSTEM ERROR : CHECK FOR DOS";
+
+        var width = _Canvases[CONSOLE_CANVASID].width;
+        var height = _Canvases[CONSOLE_CANVASID].height;
+
+        var cw, ch, nw, nh;
+        var blue = true;
+
+        _DrawingContexts[CONSOLE_CANVASID].fillStyle = 'blue';
+
+        for(ch = 0; ch < height; ch += nh) {
+            nh = (2 + Math.floor(Math.random() * 5));
+
+            for(cw = 0; cw < width; cw += nw) {
+                nw = (2 + Math.floor(Math.random() * 5));
+
+                _DrawingContexts[CONSOLE_CANVASID].fillRect(cw, ch, nw, nh);
+
+                if(blue) {
+                    _DrawingContexts[CONSOLE_CANVASID].fillStyle = 'grey';
+                } 
+                else {
+                    _DrawingContexts[CONSOLE_CANVASID].fillStyle = 'blue';
+                }
+                blue = !blue;
+
+            }//end by width fill
+        }//end by height fill
+
+        textOut(str);
+    }//end BSOD else
 
     krnShutdown();
 }

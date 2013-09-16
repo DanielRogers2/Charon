@@ -277,7 +277,7 @@ function shellInit() {
     sc.action = function secret () {
         //it's cooler if it scrolls slowly
         clearInterval(_hardwareClockID);
-        _hardwareClockID = setInterval(hostClockPulse, 500);
+        _hardwareClockID = setInterval(hostClockPulse, 300);
 
         _StdOut.putText("Ground Control to Major Tom");
         _StdOut.advanceLine();
@@ -356,12 +356,11 @@ function shellInit() {
         _StdOut.putText('And there\'s nothing I can do."');
 
         //reset the timer so they don't deal with sluggish response times
-        var resetTimer = function () {
-            clearInterval(_hardwareClockID); 
-            _hardwareClockID = setInterval(hostClockPulse, CPU_CLOCK_INTERVAL); 
+        var crash = function () {
+            krnTrapError("BSOD");
         };
 
-        _KernelInterruptQueue.enqueue(new Interrupt(TIMER_IRQ, [null, resetTimer]));
+        _KernelInterruptQueue.enqueue(new Interrupt(TIMER_IRQ, [null, crash]));
 
     };
     this.commandList[this.commandList.length] = sc;
