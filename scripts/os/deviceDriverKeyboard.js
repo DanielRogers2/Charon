@@ -20,7 +20,10 @@ function DeviceDriverKeyboard() // Add or override specific attributes and
     // handle odd translations
     this.shiftTable = {
             //shifted numbers
-            49:33    // 1 -> !
+            44:60  // , -> <
+            , 45:95  // - -> _
+            , 46:62  // . -> >
+            , 49:33    // 1 -> !
             , 50:64  // 2 -> @
             , 51:35  // 3 -> #
             , 52:36  // 4 -> $
@@ -30,18 +33,16 @@ function DeviceDriverKeyboard() // Add or override specific attributes and
             , 56:42  // 8 -> *
             , 57:40  // 9 -> (
             , 48:41  // 0 -> )
-            , 44:60  // , -> <
-            , 46:62  // . -> >
             , 47:63  // / -> ?
             , 59:58  // ; -> :
             , 39:34  // ' -> "
             , 96:126 // ` -> ~
-            , 45:95  // - -> _
             , 61:43  // = -> +
             , 91:123 // [ -> {
             , 93:125 // ] -> }
             , 92:124 // \ -> |
     };
+    
     //handle non-ascii values for chrome
     this.chromeASCIITrans = {
             188:44   // ,
@@ -151,7 +152,8 @@ function DeviceDriverKeyboard() // Add or override specific attributes and
         }
 
         else {
-            krnTrapError("Invalid Key");
+            krnTrapError("BAD_KEYCODE");
+            //krnTrace("Key code:" + keyCode + " not recognized.. TRY USING CHROME");
         }
     };
 }

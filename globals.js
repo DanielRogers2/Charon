@@ -26,7 +26,7 @@ var CONSOLE_CANVASID = 0;
 var STATUS_CANVASID = 1;
 
 //turn on/off console DEBUG
-var DEBUG = false;
+var DEBUG = true;
 
 //
 // Global Variables
@@ -36,6 +36,8 @@ var _CPU = null;
 var _OSclock = 0;       // Page 23.
 
 var _Mode = 0;   // 0 = Kernel Mode, 1 = User Mode.  See page 21.
+
+var _ASCIITranslator = null;
 
 var _Canvases = null;               // Initialized in hostInit().
 var _DrawingContexts = null;       // Initialized in hostInit().

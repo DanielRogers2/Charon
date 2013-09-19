@@ -264,7 +264,7 @@ function krnTrapError(msg)
     }
     else {
 
-        var str = "SYSTEM ERROR : CHECK FOR DOS";
+        var str = "SYSTEM ERROR : " + msg + " : CHECK FOR DOS";
 
         var width = _Canvases[CONSOLE_CANVASID].width;
         var height = _Canvases[CONSOLE_CANVASID].height;
