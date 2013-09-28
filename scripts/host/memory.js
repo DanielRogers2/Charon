@@ -10,9 +10,6 @@ function Memory() {
      * 
      * @param address The address (as a hex value) to store data in
      * @param data The data word (as a byte hex value) to store in memory
-     *              The data word will be padded/truncated to WORD_SIZE length
-     *              value (WORD_SIZE == length of data word in hex chars)
-     *              Padding is done with 00
      */
     this.write = function(address, data) {
         //Get our address to something we can use to array index
@@ -24,23 +21,7 @@ function Memory() {
         var internalAddr = address % this.BLOCK_SIZE;
 
         //do memory write
-        for(var i = 0; i < this.WORD_SIZE; ++i) {
-            //Writing data from input data
-            if( (data.length - 1) >= i) {
-                this.RAM[blockAddr][internalAddr] = data[i];
-            }
-            //Padding unspecified data
-            else {
-                this.RAM[blockAddr][internalAddr] = '00';
-            }
-            
-            //check if read flows into next block of memory
-            ++internalAddr;
-            if(internalAddr == this.BLOCK_SIZE) {
-                intenalAddr = 0;
-                ++blockAddr;
-            }
-        }
+        this.RAM[blockAddr][internalAddr] = data;
     };
 
     /*
@@ -48,7 +29,7 @@ function Memory() {
      * 
      * @param address The address to read data from as a hex value
      * 
-     * @return A word of data (WORD_SIZE bytes expressed as hex values)
+     * @return A byte of data (2 hex digits)
      */
     this.read = function(address) {
         //Get array index form
@@ -57,20 +38,11 @@ function Memory() {
         var internalAddr = address % this.BLOCK_SIZE;
 
         var byte;
-        var data = [];
+        byte = this.RAM[blockAddr][internalAddr];
+        //Make sure to return sets of hex pairs
+        byte = (byte.length == 1) ? '0' + byte : byte;
         
-        for(var i = 0; i < this.WORD_SIZE; ++i) {
-            byte = this.RAM[blockAddr][internalAddr];
-            //Make sure to return sets of hex pairs
-            byte = (byte.length == 1) ? '0' + byte : byte;
-            data[i] = byte;
-            
-            ++internalAddr;
-            if(internalAddr == this.BLOCK_SIZE) {
-                internalAddr = 0;
-                ++blockAddr;
-            }
-        }
+        return byte;
     };
 
     /*
@@ -82,7 +54,6 @@ function Memory() {
 
     this.RAM = [];
     this.SIZE = 768;     //bytes of mem
-    this.WORD_SIZE = 6;  //bytes per word, must be less than block size
     this.BLOCK_SIZE = 8; //bytes per row of memory
 
     var temp = [];
