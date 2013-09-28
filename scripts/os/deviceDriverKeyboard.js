@@ -66,7 +66,7 @@ function DeviceDriverKeyboard() // Add or override specific attributes and
     };
 
     this.isr = function krnKbdDispatchKeyPress(params) {
-        // Parse the params.    TODO: Check that they are valid and osTrapError if not.
+        // Parse the params.
         var keyCode = params[0];
         var isShifted = params[1];
 
@@ -152,8 +152,8 @@ function DeviceDriverKeyboard() // Add or override specific attributes and
         }
 
         else {
-            krnTrapError("BAD_KEYCODE");
-            //krnTrace("Key code:" + keyCode + " not recognized.. TRY USING CHROME");
+            //krnTrapError("BAD_KEYCODE");
+            krnTrace("Key code:" + keyCode + " not recognized..");
         }
     };
 }

@@ -34,5 +34,20 @@ function Cpu() {
         krnTrace("CPU cycle");
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
+        
     };
+    
+    //CPU instructions
+    //Databits argument is the rest of the bits following the opcode expressed
+    //  as an array of 2-value hex digits
+    //LDA with constant
+    this.A9 = function(databits) {
+        this.Acc = databits[0];
+    };
+    
+    //LDA from mem
+    this.AD = function(databits) {
+        
+    };
+    
 }
