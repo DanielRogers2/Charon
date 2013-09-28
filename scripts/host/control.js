@@ -15,34 +15,30 @@
    Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
    ------------ */
 
-
-
 //Control Services
-
-function hostInit()
-{
+function hostInit() {
     _Canvases = [];
-    // Get a global reference to the canvas.  TODO: Move this stuff into a Display Device Driver, maybe?
+    // Get a global reference to the canvas. TODO: Move this stuff into a
+    // Display Device Driver, maybe?
     _Canvases[_Canvases.length] = document.getElementById('display');
     _Canvases[_Canvases.length] = document.getElementById('status');
 
     _DrawingContexts = [];
     // Get a global reference to the drawing context.
-    _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length].getContext('2d');
-    _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length].getContext('2d');
-
+    _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length]
+            .getContext('2d');
+    _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length]
+            .getContext('2d');
 
     /*
-    _DrawingContext   = _Canvas.getContext('2d');
-    _StatusBarContext = _StatusBar.getContext('2d');
-
-    // Using HTML5 text functions
-    _DrawingContext.font   = _DefaultFontFamily;
-    _StatusBarContext.font = _DefaultFontFamily;
+     * _DrawingContext = _Canvas.getContext('2d'); _StatusBarContext =
+     * _StatusBar.getContext('2d');
+     *  // Using HTML5 text functions _DrawingContext.font = _DefaultFontFamily;
+     * _StatusBarContext.font = _DefaultFontFamily;
      */
 
     // Clear the log text box.
-    document.getElementById("taLog").value="";
+    document.getElementById("taLog").value = "";
 
     // Set focus on the start button.
     document.getElementById("btnStartOS").focus();
@@ -55,8 +51,7 @@ function hostInit()
 
 }
 
-function hostLog(msg, source)
-{
+function hostLog(msg, source) {
     // Check the source.
     if (!source) {
         source = "?";
@@ -68,8 +63,9 @@ function hostLog(msg, source)
     // Note the REAL clock in milliseconds since January 1, 1970.
     var now = new Date().getTime();
 
-    // Build the log string.   
-    var str = "({ clock:" + clock + ", source:" + source + ", msg:" + msg + ", now:" + now  + " })"  + "\n";    
+    // Build the log string.
+    var str = "({ clock:" + clock + ", source:" + source + ", msg:" + msg
+            + ", now:" + now + " })" + "\n";
 
     // Update the log console.
     var taLog = document.getElementById("taLog");
@@ -77,12 +73,9 @@ function hostLog(msg, source)
     // Optionally update a log database or some streaming service.
 }
 
+// Control Events
 
-
-//Control Events
-
-function hostBtnStartOS_click(btn)
-{
+function hostBtnStartOS_click(btn) {
     // Disable the start button...
     btn.disabled = true;
 
@@ -90,12 +83,16 @@ function hostBtnStartOS_click(btn)
     document.getElementById("btnHaltOS").disabled = false;
     document.getElementById("btnReset").disabled = false;
 
-    // .. set focus on the OS console display ... 
+    // .. set focus on the OS console display ...
     document.getElementById("display").focus();
 
     // ... Create and initialize the CPU ...
     _CPU = new Cpu();
     _CPU.init();
+
+    // Create memory
+    _MEMORY = new Memory();
+    _MEMORY.init();
 
     // ... then set the host clock pulse ...
     _hardwareClockID = setInterval(hostClockPulse, CPU_CLOCK_INTERVAL);
@@ -103,8 +100,7 @@ function hostBtnStartOS_click(btn)
     krnBootstrap();
 }
 
-function hostBtnHaltOS_click(btn)
-{
+function hostBtnHaltOS_click(btn) {
     hostLog("emergency halt", "host");
     hostLog("Attempting Kernel shutdown.", "host");
     // Call the OS shutdown routine.
@@ -114,11 +110,13 @@ function hostBtnHaltOS_click(btn)
     // TODO: Is there anything else we need to do here?
 }
 
-function hostBtnReset_click(btn)
-{
-    // The easiest and most thorough way to do this is to reload (not refresh) the document.
-    location.reload(true);  
-    // That boolean parameter is the 'forceget' flag. When it is true it causes the page to always
-    // be reloaded from the server. If it is false or not specified, the browser may reload the 
+function hostBtnReset_click(btn) {
+    // The easiest and most thorough way to do this is to reload (not refresh)
+    // the document.
+    location.reload(true);
+    // That boolean parameter is the 'forceget' flag. When it is true it causes
+    // the page to always
+    // be reloaded from the server. If it is false or not specified, the browser
+    // may reload the
     // page from its cache, which is not what we want.
 }
