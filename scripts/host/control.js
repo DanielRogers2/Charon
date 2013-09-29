@@ -26,9 +26,9 @@ function hostInit() {
     _DrawingContexts = [];
     // Get a global reference to the drawing context.
     _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length]
-            .getContext('2d');
+    .getContext('2d');
     _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length]
-            .getContext('2d');
+    .getContext('2d');
 
     /*
      * _DrawingContext = _Canvas.getContext('2d'); _StatusBarContext =
@@ -65,7 +65,7 @@ function hostLog(msg, source) {
 
     // Build the log string.
     var str = "({ clock:" + clock + ", source:" + source + ", msg:" + msg
-            + ", now:" + now + " })" + "\n";
+    + ", now:" + now + " })" + "\n";
 
     // Update the log console.
     var taLog = document.getElementById("taLog");
@@ -73,7 +73,7 @@ function hostLog(msg, source) {
     // Optionally update a log database or some streaming service.
 }
 
-// Control Events
+//Control Events
 
 function hostBtnStartOS_click(btn) {
     // Disable the start button...
@@ -83,9 +83,6 @@ function hostBtnStartOS_click(btn) {
     document.getElementById("btnHaltOS").disabled = false;
     document.getElementById("btnReset").disabled = false;
 
-    // .. set focus on the OS console display ...
-    document.getElementById("display").focus();
-
     // ... Create and initialize the CPU ...
     _CPU = new Cpu();
     _CPU.init();
@@ -94,10 +91,35 @@ function hostBtnStartOS_click(btn) {
     _MEMORY = new Memory();
     _MEMORY.init();
 
-    // ... then set the host clock pulse ...
-    _hardwareClockID = setInterval(hostClockPulse, CPU_CLOCK_INTERVAL);
+    //Make our faux loading screen
+    var waitTime = 2300;    //how long the 'boot' takes 
+                            // (2300 is ~= 1 full animation of the boot gif)
+
+    var ldScrNode = document.getElementById('display');
+
+    var img = document.createElement('img');
+    img.id = 'bootimg';
+    img.src = 'images/boot.gif';
+    img.height = 500;
+    img.width = 500;
+
+    document.getElementById('divConsole').replaceChild(img, ldScrNode);
+
+    window.setTimeout(function () {
+        document.getElementById('divConsole').replaceChild(ldScrNode, img);
+    }, waitTime);
+
+    var loadComplete = function () {
+        // .. set focus on the OS console display ...
+        document.getElementById("display").focus();
+        
+        // ... then set the host clock pulse ...
+        _hardwareClockID = setInterval(hostClockPulse, CPU_CLOCK_INTERVAL);
+        krnBootstrap();
+    };
+
     // .. and call the OS Kernel Bootstrap routine.
-    krnBootstrap();
+    window.setTimeout(loadComplete, waitTime);
 }
 
 function hostBtnHaltOS_click(btn) {

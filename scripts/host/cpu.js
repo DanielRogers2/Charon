@@ -62,7 +62,7 @@ function Cpu() {
     this.FETCH = function() {
         var data = [];
         var decimalPC = hexToDec(this.PC);
-        
+
         // Opcodes use a max of 3 bytes
         for ( var i = 0; i < 3; ++i) {
             // read in all bytes
@@ -75,23 +75,84 @@ function Cpu() {
 
     // CPU Instruction
 
-    // Databits argument is the rest of the bits following the opcode expressed
-    // as an array of 2-value hex digits
-    // LDA with constant
-    this.A9 = function(databits) {
+    // Databits argument is the rest of the bits following the opcode
+    //      expressed as an array of 2-value hex digits
+    // LDA -- load Acc with constant
+    this['A9'] = function(databits) {
         this.Acc = databits[0];
         this.PC_INC(2);
     };
 
-    // LDA from mem
-    this.AD = function(databits) {
+    // LDA -- load Acc from mem
+    this['AD'] = function(databits) {
         //Get full address
         var addr = databits.join('');
         //convert to decimal for read()
         addr = hexToDec(addr);
-        
+
         this.Acc = _MMU.read(addr);
         this.PC_INC(3);
+    };
+
+    // STA -- store acc to addr
+    this['8D'] = function(databits) {
+
+    };
+
+    // ADC -- add with carry addr to Acc
+    this['6D'] = function(databits) {
+
+    };
+
+    // LDX -- load Xreg with const
+    this['A2'] = function(databits) {
+
+    };
+
+    // LDX -- load Xreg from mem
+    this['AE'] = function(databits) {
+
+    };
+
+    // LDY -- load Yreg with const
+    this['A0'] = function(databits) {
+
+    };
+
+    // LDY -- load Yreg from mem
+    this['AC'] = function(databits) {
+
+    };
+
+    // NOP --
+    this['EA'] = function(databits) {
+        //do nothing
+        this.PC_INC(1);
+    };
+
+    // BRK -- BREAK: execution exit
+    this['00'] = function(databits) {
+        
+    };
+
+    // CPX -- compare Xreg to data in mem
+    this['EC'] = function(databits) {
+        
+    };
+
+    // BNE -- branch if Zflag == 0
+    this['D0'] = function(databits) {
+        
+    };
+
+    // INC -- increment value of byte in mem
+    this['EE'] = function(databits) {
+        
+    };
+
+    // SYS -- system call
+    this['FF'] = function(databits) {
+        
     };
 
 }
