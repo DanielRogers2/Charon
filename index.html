@@ -42,7 +42,7 @@
 <body onload="hostInit();">
 
 <div id="divMain" style="width:100%;">
-
+	
    <div id="divButtonBar" style="margin:4px;">
       <input type="button"
              id = "btnStartOS"
@@ -50,7 +50,7 @@
              class="normal_button"
              value="Start"
              tabindex="0"
-             onclick="hostBtnStartOS_click(this);">
+             onclick="hostBtnStartOS_click(this);"/>
 
       <input type="button"
              id = "btnHaltOS"
@@ -59,7 +59,7 @@
              disabled="disabled"
              value="Halt"
              tabindex="1"
-             onclick="hostBtnHaltOS_click(this);">
+             onclick="hostBtnHaltOS_click(this);"/>
 
       <input type="button"
              id = "btnReset"
@@ -68,19 +68,77 @@
              disabled="disabled"
              value="Reset"
              tabindex="2"
-             onclick="hostBtnReset_click(this);">
+             onclick="hostBtnReset_click(this);"/>
+   </div>
+   
+   <div id="divUserProgramInput" style="height:215px; float:left">
+      <label>
+         User Program Input
+      </label>
+         <br>
+         <textarea name="taProgramInput"
+                   id  ="taProgramInput"
+                   rows="8"
+                   cols="48"
+         ></textarea>
+   </div>
+   
+   
+   <div id="divCPU" style="width:110px; height:215px; margin-left:4px; float:left">
+      <label>
+      CPU Registers
+      </label>
+      <br>
+      <table id="CPU" border="1" height="190" width="110">
+      <tr>
+      	<td>PC</td>
+      	<td id="PC">0x00</td>
+      </tr>
+      <tr>
+      	<td>ACC</td>
+      	<td id="ACC">0x00</td>
+      </tr>
+      <tr>
+      	<td>X Reg</td>
+      	<td id="XReg">0x00</td>
+      </tr>
+      <tr>
+      	<td>Y Reg</td>
+      	<td id="YReg">0x00</td>
+      </tr>
+      <tr>
+      	<td>Z Flag</td>
+      	<td id="ZFlag">0</td>
+      </tr>
+      </table>
+   </div>
+   
+   <div id="divMem" style="height:215px; margin-left:580px;">
+      <label>
+         System Memory
+      </label>
+         <br>
+         <div id="memScroll" style="height:190px; 
+         							width:375px; 
+         						    overflow:auto;"
+         >
+         <table id="memory" border="1"
+         ></table>
+         </div>
    </div>
 
-   <div id="divConsole" style="margin:4px; width:500px; height:500px; float:left;">
-      <canvas id="display"
-              width="500px"
-              height="500px"
-              tabindex="3">
-      </canvas>
-      
+   <div id="divConsole" style="margin:4px; width:500px; height:520px; float:left;">
+      <label>
+      Console
+      </label>
+         <canvas id="display"
+                 width="500"
+                 height="500"
+                 tabindex="3">
+         </canvas>
       <canvas id="status"
-              width="500px"
-              height="20px"
+              width="500"
+              height="20"
               tabindex="4">
       </canvas>
    </div>
@@ -96,19 +154,7 @@
          ></textarea>
       </label>
    </div>
-
-   <div id="divUserProgramInput" style="margin-left:520px;">
-      <label>
-         User Program Input
-         <br>
-         <textarea name="taProgramInput"
-                   id  ="taProgramInput"
-                   rows="8"
-                   cols="48"
-         ></textarea>
-      </label>
-   </div>
-
+   
 </div>
 
 <p class="footerText" style="clear:both;">

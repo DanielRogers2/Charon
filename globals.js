@@ -10,16 +10,16 @@
 
 //Global CONSTANTS
 var APP_NAME = "Charon"; // ferryman of the dead, appropriate for an OS
-                            // written in JS
+//written in JS
 var APP_VERSION = "0.01";
 
 var CPU_CLOCK_INTERVAL = 10; // This is in ms, or milliseconds, so 1000 = 1
-                                // second.
+//second.
 
 var TIMER_IRQ = 0; // Pages 23 (timer), 9 (interrupts), and 561 (interrupt
-                    // priority).
-// NOTE: The timer is different from hardware/host clock pulses. Don't confuse
-// these.
+//priority).
+//NOTE: The timer is different from hardware/host clock pulses. Don't confuse
+//these.
 var KEYBOARD_IRQ = 1;
 
 var DISPLAY_IRQ = 2;
@@ -27,10 +27,10 @@ var DISPLAY_IRQ = 2;
 var CONSOLE_CANVASID = 0;
 var STATUS_CANVASID = 1;
 
-// turn on/off console DEBUG
+//turn on/off console DEBUG
 var DEBUG = true;
 
-// Global Variables
+//Global Variables
 
 var _CPU = null;
 
@@ -49,37 +49,37 @@ var _DrawingContexts = null; // Initialized in hostInit().
 var _DefaultFontFamily = "12px Courier";
 var _DefaultFontSize = 12;
 var _FontHeightMargin = 4; // Additional space added to font size when
-                            // advancing a line.
+//advancing a line.
 
-// Default the OS trace to be on.
+//Default the OS trace to be on.
 var _Trace = true;
 
-// OS queues
+//OS queues
 var _KernelInterruptQueue = null;
 var _KernelBuffers = null;
 var _KernelInputQueue = null;
 var _KernelTimedEvents = null;
 var _KernelCurrentProcess = null; // pcb of currently executing process
 var _KernelReadyQueue = null; // TODO:Implement this so kernel handles >1
-                                // program
+//program
 
-// Standard input and output
+//Standard input and output
 var _StdIn = null;
 var _StdOut = null;
 
-// UI
+//UI
 var _Console = null;
 var _OsShell = null;
 var _Clock = null;
 
-// At least this OS is not trying to kill you. (Yet.)
+//At least this OS is not trying to kill you. (Yet.)
 var _SarcasticMode = false;
 
-// Global Device Driver Objects - page 12
+//Global Device Driver Objects - page 12
 var krnKeyboardDriver = null;
 var krnDisplayDriver = null;
 
-// For testing...
+//For testing...
 var _GLaDOS = null;
 
 /*
@@ -102,6 +102,13 @@ function cloneCanvas(canvas) {
  * digits
  */
 function hexToDec(hexval) {
+    //strip 0x
+    if(hexval.slice(0, 2) == "0x") {
+        hexval = hexval.slice(2);
+    }
+
+    hexval = parseInt(hexval);
+
     var decimal = 0;
     var p16 = 0;
     for ( var i = 0; i < hexval.length; ++i) {
@@ -114,6 +121,8 @@ function hexToDec(hexval) {
         // the appropriate power of 16
         decimal += (HEXTODEC_TABLE[hexval[i]] * p16);
     }
+
+    return decimal;
 }
 
 /*
@@ -122,60 +131,84 @@ function hexToDec(hexval) {
  * @param decval Expects an integer
  */
 function decToHex(decval) {
-    var hex = [];
-    // Log16 of value gives the largest power of 16 contained in it
-    // No log16 method, so need to transform
-    var max_p16 = Math.floor(Math.log(decval) / Math.log(16));
+    //Only do work if decval is != 0
+    if(decval != 0) {
 
-    // Stores the power of 16 to divide out
-    var p16 = 0;
+        var hex;
 
-    // Stores the unconverted divided out power
-    var hexAsDec = 0;
+        //track sign
+        var sgn = Math.abs(decval) / decval;
 
-    for ( var i = 0; i <= max_p16; ++i) {
-        p16 = Math.pow(16, (max_p16 - i));
-        hexAsDec = Math.floor(decval / p16);
+        if(sgn < 1) {
+            hex = "-0x";
+        }
+        else {
+            hex = "0x";
+        }
 
-        hex[i] = DECTOHEX_TABLE[hexAsDec];
-        decval %= hexAsDec;
+        decval *= sgn;
+
+        // Log16 of value gives the largest power of 16 contained in it
+        // No log16 method, so need to transform
+        var max_p16 = Math.floor(Math.log(decval) / Math.log(16));
+        
+        // Stores the power of 16 to divide out
+        var p16 = 0;
+
+        // Stores the unconverted divided out power
+        var hexAsDec = 0;
+
+        for ( var i = 0; i <= max_p16; ++i) {
+
+            p16 = Math.pow(16, (max_p16 - i));
+            hexAsDec = Math.floor(decval / p16);
+
+            hex += DECTOHEX_TABLE[hexAsDec];
+
+            decval = decval % p16;
+        }
     }
+    else {
+        hex = "0x00";
+    }
+
+    return hex;
 }
 
 const HEXTODEC_TABLE = {
-    0 : 0,
-    1 : 1,
-    2 : 2,
-    3 : 3,
-    4 : 4,
-    5 : 5,
-    6 : 6,
-    7 : 7,
-    8 : 8,
-    9 : 9,
-    A : 10,
-    B : 11,
-    C : 12,
-    D : 13,
-    E : 14,
-    F : 15
+        0 : 0,
+        1 : 1,
+        2 : 2,
+        3 : 3,
+        4 : 4,
+        5 : 5,
+        6 : 6,
+        7 : 7,
+        8 : 8,
+        9 : 9,
+        A : 10,
+        B : 11,
+        C : 12,
+        D : 13,
+        E : 14,
+        F : 15
 };
 
 const DECTOHEX_TABLE = {
-    0 : 0,
-    1 : 1,
-    2 : 2,
-    3 : 3,
-    4 : 4,
-    5 : 5,
-    6 : 6,
-    7 : 7,
-    8 : 8,
-    9 : 9,
-    10 : 'A',
-    11 : 'B',
-    12 : 'C',
-    13 : 'D',
-    14 : 'E',
-    15 : 'F'
+        0 : "0",
+        1 : "1",
+        2 : "2",
+        3 : "3",
+        4 : "4",
+        5 : "5",
+        6 : "6",
+        7 : "7",
+        8 : "8",
+        9 : "9",
+        10 : 'A',
+        11 : 'B',
+        12 : 'C',
+        13 : 'D',
+        14 : 'E',
+        15 : 'F'
 };

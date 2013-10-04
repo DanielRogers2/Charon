@@ -18,8 +18,6 @@
 //Control Services
 function hostInit() {
     _Canvases = [];
-    // Get a global reference to the canvas. TODO: Move this stuff into a
-    // Display Device Driver, maybe?
     _Canvases[_Canvases.length] = document.getElementById('display');
     _Canvases[_Canvases.length] = document.getElementById('status');
 
@@ -29,6 +27,9 @@ function hostInit() {
     .getContext('2d');
     _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length]
     .getContext('2d');
+
+    //Complete the memory table
+    genMemoryTable();
 
     /*
      * _DrawingContext = _Canvas.getContext('2d'); _StatusBarContext =
@@ -91,9 +92,10 @@ function hostBtnStartOS_click(btn) {
     _MEMORY = new Memory();
     _MEMORY.init();
 
+
     //Make our faux loading screen
     var waitTime = 2300;    //how long the 'boot' takes 
-                            // (2300 is ~= 1 full animation of the boot gif)
+    // (2300 is ~= 1 full animation of the boot gif)
 
     var ldScrNode = document.getElementById('display');
 
@@ -103,6 +105,8 @@ function hostBtnStartOS_click(btn) {
     img.height = 500;
     img.width = 500;
 
+    console.log(ldScrNode);
+    console.log(document.getElementById("divConsole"));
     document.getElementById('divConsole').replaceChild(img, ldScrNode);
 
     window.setTimeout(function () {
@@ -112,7 +116,7 @@ function hostBtnStartOS_click(btn) {
     var loadComplete = function () {
         // .. set focus on the OS console display ...
         document.getElementById("display").focus();
-        
+
         // ... then set the host clock pulse ...
         _hardwareClockID = setInterval(hostClockPulse, CPU_CLOCK_INTERVAL);
         krnBootstrap();
@@ -141,4 +145,66 @@ function hostBtnReset_click(btn) {
     // be reloaded from the server. If it is false or not specified, the browser
     // may reload the
     // page from its cache, which is not what we want.
+}
+
+/*
+ * Complete the memory table html element
+ */
+function genMemoryTable() {
+    var mem = new Memory();
+    var width = mem.BLOCK_SIZE;
+    var height = mem.SIZE / width;
+    var block = -1;
+
+    var tblBody = document.createElement("tbody");
+    var tr, td;
+    var rowLbl;
+
+    for(var i = 0; i < height; ++i) {
+
+        //Add in memory block separators
+        var cblock = Math.floor(i * mem.BLOCK_SIZE / 255);
+        
+        if(cblock > block) {
+            tr = document.createElement("tr");
+            td = document.createElement("td");
+            td.appendChild(document 
+                    .createTextNode("Block: " + decToHex(cblock * 256)
+                            + " - " + decToHex( ( (cblock + 1) * 256) - 1 ) ) );
+
+            tr.appendChild(td);
+            tblBody.appendChild(tr);
+            
+            block = cblock;
+        }
+
+        tr = document.createElement("tr");
+        tr.setAttribute("id", "tr"+i);
+
+        //create row label
+        td = document.createElement("td");
+
+        //row starts at BLOCK_SIZE * number of rows
+        rowLbl = mem.BLOCK_SIZE * i;
+
+        rowLbl = decToHex(rowLbl);
+        td.appendChild(document.createTextNode(rowLbl));
+
+        tr.appendChild(td);
+
+        for(var j = 1; j <= width; ++j) {
+            //Make memory cell
+            td = document.createElement("td");
+            td.setAttribute("id", "tdr" + i + "c" + j);
+
+            td.appendChild(document.createTextNode("00"));
+
+            tr.appendChild(td);
+        }
+
+        tblBody.appendChild(tr);
+    }
+
+    document.getElementById("memory").appendChild(tblBody);
+
 }
