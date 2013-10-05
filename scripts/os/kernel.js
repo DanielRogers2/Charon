@@ -70,10 +70,111 @@ function krnBootstrap()      // Page 8.
         krnDisplayDriver.isr(params);
     };
     
+    //Software system call handlers
+    krnTrace("Loading SYS handlers");
+    this.krnInterruptVector[SYS_IRQ] = function (params) {
+        console.log("SYS CALL");
+        console.log("  x: " + _CPU.Xreg);
+        console.log("  y: " + _CPU.Yreg);
+        
+        //XREG == 1, print integer
+        if(_CPU.Xreg == 1) {
+            _StdOut.putText("" + _CPU.Yreg);
+        }
+        //XREG == 2, print string null terminated
+        else if(_CPU.Xreg == 2) {
+            //get ASCII data starting at Yreg
+            var data = [];
+            var i = _CPU.Yreg;
+            var byte = hexToDec(_MMU.read(i++));
+            
+            //read until nul byte or MEM ACCESS VIOLATION
+            while(byte != "00") {
+                data[data.length] = byte;
+                byte = hexToDec(_MMU.read(i++));
+            }
+            
+            //translate from ascii values to string
+            var str = "";
+            for(i = 0; i < data.length; ++i) {
+                str += String.fromCharCode(data[i]);
+            }
+            
+            _StdOut.putText(str);
+        }
+        else {
+            _KernelInterruptQueue.enqueue(new Interrupt(SW_FATAL_IRQ, [2]));
+        }
+        
+    };
+    
+    //Software violation handlers
+    this.krnInterruptVector[SW_FATAL_IRQ] = function(params) {
+        _StdOut.putText("process: " + _KernelCurrentProcess.PID + " fatal exception");
+        _StdOut.advanceLine();
+        
+        if(params[0] == 0) {
+            //Invalid opcode
+            _StdOut.putText("Invalid opcode at byte: " + _CPU.PC);
+        }
+        else if(params[0] == 1) {
+            //Memory access violation
+            _StdOut.putText("Memory access violation");
+        }
+        else if(params[0] == 2) {
+            //Bad SYS call
+            _StdOut.putText("Bad SYS Opcode");
+        }
+
+        _StdOut.advanceLine();
+        _StdOut.putText(_OsShell.promptStr);
+
+        _KernelCurrentProcess.state = 'failed';
+        _CPU.isExecuting = false;
+    };
+    
+    //Loading program exit handler
+    this.krnInterruptVector[PROG_EXIT] = function() {
+        //TODO: Add scheduler stuff
+        _StdOut.advanceLine();
+        _StdOut.putText("Program: " + _KernelCurrentProcess.PID + " - Complete");
+        
+        _KernelCurrentProcess.state = "done";
+        _KernelCurrentProcess.synchronize();
+        
+        //Display PCB
+        _StdOut.advanceLine();
+        _StdOut.putText("PCB:");
+        _StdOut.advanceLine();
+        _StdOut.putText("         PID: " + _KernelCurrentProcess.PID);
+        _StdOut.advanceLine();
+        _StdOut.putText("          PC: " + decToHex(_KernelCurrentProcess.PC));
+        _StdOut.advanceLine();
+        _StdOut.putText("         ACC: " + decToHex(_KernelCurrentProcess.Acc));
+        _StdOut.advanceLine();
+        _StdOut.putText("        Xreg: " + decToHex(_KernelCurrentProcess.Xreg));
+        _StdOut.advanceLine();
+        _StdOut.putText("        Yreg: " + decToHex(_KernelCurrentProcess.Yreg));
+        _StdOut.advanceLine();
+        _StdOut.putText("       Zflag: " + decToHex(_KernelCurrentProcess.Zflag));
+        _StdOut.advanceLine();
+        _StdOut.putText("       state: " + _KernelCurrentProcess.state);
+        _StdOut.advanceLine();
+        _StdOut.putText("    baseaddr: " + _KernelCurrentProcess.memStart);
+        _StdOut.advanceLine();
+        _StdOut.putText("  Mem allocd: " + _KernelCurrentProcess.memLimit);
+        _StdOut.advanceLine();
+        _StdOut.putText(_OsShell.promptStr);
+        
+        _CPU.isExecuting = false;
+    };
+    
     //Loads the memory management unit
     krnTrace("Loading MMU");
     _MMU = new MMU();
     _MMU.init();
+    
+    _KernelLoadedProcesses = [];
 
     // Enable the OS Interrupts.  (Not the CPU clock interrupt, as that is done in the hardware sim.)
     krnTrace("Enabling the interrupts.");

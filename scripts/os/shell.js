@@ -235,23 +235,87 @@ function shellInit() {
     sc.command = 'load';
     sc.description = ' - loads a program from the program entry';
     sc.action = function () {
-        //just check valid hex for now
+        //Validate hex and load
         var rawProg = document.getElementById("taProgramInput").value;
+        //remove whitespace
+        rawProg = rawProg.replace(/\s+/g, '').toUpperCase();
 
-        //if not A-F, a-f, 0-9, or " " then it's not valid hex
-        var invExp = new RegExp("[^A-Fa-f0-9 \n]", "m");
-        var valExp = new RegExp("[A-Fa-f0-9]", "m");
+        //if not A-F,0-9then it's not valid hex
+        var invExp = new RegExp("[^A-F0-9\n]", "m");
+        var valExp = new RegExp("[A-F0-9]", "m");
         
         var invalid = invExp.test(rawProg);
+        //check if multiple of 2 values (full byes)
+        invalid &= ((rawProg % 2) != 0);
         var valid = valExp.test(rawProg);
 
         if(!invalid && valid) {
-            _StdOut.putText("Loaded Program:");
+            _StdOut.putText("Loaded Program");
             _StdOut.advanceLine();
-            _StdOut.putText(rawProg);
+            
+            //split into dual-hex blocks
+            var progBytes = [];
+            for(var i = 0; i < rawProg.length; i+=2) {
+                progBytes[i / 2] = rawProg.slice(i, i+2);
+            }
+            
+            //Create process control block
+            var pcb = new PCB();
+            
+            var memstart = 0;
+            var pid = _KernelLoadedProcesses.length;
+            
+            pcb.init(pid, memstart);
+            
+            for(var i = memstart; i < progBytes.length; ++i) {
+                //TODO: Check program size during load to prevent overflow
+                _MEMORY.write(i, progBytes[i]);
+            }
+            
+            _KernelLoadedProcesses[pid] = pcb;
+            
+            _StdOut.putText("PID: " + pid);
         }
         else {
             _StdOut.putText("Invalid Program!");
+        }
+
+    };
+    this.commandList[this.commandList.length] = sc;
+    
+    /*
+     * Run a loaded program
+     */
+    sc = new ShellCommand();
+    sc.command = 'run';
+    sc.description = ' <pid> - run a loaded program with <pid>';
+    sc.action = function (args) {
+        if(args.length > 0) {
+            if(args[0] in _KernelLoadedProcesses) {
+                //Have an actual process we can execute
+                //TODO: Put on ready queue and then execute for scheduling
+                _KernelCurrentProcess = _KernelLoadedProcesses[args[0]];
+                
+                //Clear junk data if needed
+                _KernelCurrentProcess.zeroRegisters();
+                
+                //TODO: Move this into context switch code for multiprogramming
+                _CPU.PC = _KernelCurrentProcess.PC; // Program Counter
+                _CPU.Acc = _KernelCurrentProcess.ACC; // Accumulator
+                _CPU.Xreg = _KernelCurrentProcess.Xreg; // X register
+                _CPU.Yreg = _KernelCurrentProcess.Yreg; // Y register
+                _CPU.Zflag = _KernelCurrentProcess.Zflag; // Z-ero flag
+                
+                _KernelCurrentProcess.state = "running";
+                
+                _CPU.isExecuting = true;
+            }
+            else {
+                _StdOut.putText("No such process");
+            }
+        }
+        else {
+            _StdOut.putText("Please supply a PID");
         }
 
     };

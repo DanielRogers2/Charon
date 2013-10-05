@@ -10,13 +10,13 @@ function Memory() {
     this.BLOCK_SIZE = 8; // bytes per row of memory
 
     this.init = function() {
-        var temp = [];
-        for ( var i = 0; i < this.BLOCK_SIZE; ++i) {
-            temp[i] = 0;
-        }
 
         for ( var i = 0; i < Math.floor(this.SIZE / this.BLOCK_SIZE); ++i) {
-            this.RAM[i] = temp;
+            this.RAM[i] = [];
+            
+            for(var j = 0; j < this.BLOCK_SIZE; ++j) {
+                this.RAM[i][j] = 0;
+            }
         }
     };
     
@@ -34,6 +34,9 @@ function Memory() {
 
         // do memory write
         this.RAM[blockAddr][internalAddr] = data;
+
+        this.updateDisplay(blockAddr, internalAddr, data);
+        
     };
 
     /*
@@ -49,10 +52,11 @@ function Memory() {
         var internalAddr = address % this.BLOCK_SIZE;
 
         var byte;
+        
         byte = this.RAM[blockAddr][internalAddr];
         // Make sure to return sets of hex pairs
         byte = (byte.length == 1) ? '0' + byte : byte;
-
+        
         return byte;
     };
 
@@ -61,5 +65,13 @@ function Memory() {
      */
     this.downloadMoreRam = function(size) {
         this.SIZE += size;
+    };
+    
+    /*
+     * Update memory display
+     */
+    this.updateDisplay = function(col, row, data) {
+        var cellId = "tdr" + col + "c" + (row + 1);
+        document.getElementById(cellId).innerHTML = data;
     };
 }

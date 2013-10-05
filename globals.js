@@ -24,11 +24,20 @@ var KEYBOARD_IRQ = 1;
 
 var DISPLAY_IRQ = 2;
 
+var SYS_IRQ = 3; //handles SW system calls
+
+var SW_FATAL_IRQ = 4; //Software Fatal exception
+// 0 = bad opcode
+// 1 = memory access violation
+// 2 = bad SYS call
+
+var PROG_EXIT = 5; //program complete
+
 var CONSOLE_CANVASID = 0;
 var STATUS_CANVASID = 1;
 
 //turn on/off console DEBUG
-var DEBUG = true;
+var DEBUG = false;
 
 //Global Variables
 
@@ -60,6 +69,7 @@ var _KernelBuffers = null;
 var _KernelInputQueue = null;
 var _KernelTimedEvents = null;
 var _KernelCurrentProcess = null; // pcb of currently executing process
+var _KernelLoadedProcesses = null; // List of processes
 var _KernelReadyQueue = null; // TODO:Implement this so kernel handles >1
 //program
 
@@ -102,12 +112,13 @@ function cloneCanvas(canvas) {
  * digits
  */
 function hexToDec(hexval) {
-    //strip 0x
-    if(hexval.slice(0, 2) == "0x") {
-        hexval = hexval.slice(2);
-    }
 
-    hexval = parseInt(hexval);
+    if(hexval.length > 2) {
+        //strip 0x
+        if(hexval.slice(0, 2) == "0x") {
+            hexval = hexval.slice(2);
+        }
+    }
 
     var decimal = 0;
     var p16 = 0;
@@ -134,24 +145,11 @@ function decToHex(decval) {
     //Only do work if decval is != 0
     if(decval != 0) {
 
-        var hex;
-
-        //track sign
-        var sgn = Math.abs(decval) / decval;
-
-        if(sgn < 1) {
-            hex = "-0x";
-        }
-        else {
-            hex = "0x";
-        }
-
-        decval *= sgn;
-
+        var hex = "";
         // Log16 of value gives the largest power of 16 contained in it
         // No log16 method, so need to transform
         var max_p16 = Math.floor(Math.log(decval) / Math.log(16));
-        
+
         // Stores the power of 16 to divide out
         var p16 = 0;
 
@@ -169,7 +167,7 @@ function decToHex(decval) {
         }
     }
     else {
-        hex = "0x00";
+        hex = "00";
     }
 
     return hex;

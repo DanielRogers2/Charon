@@ -69,6 +69,15 @@
              value="Reset"
              tabindex="2"
              onclick="hostBtnReset_click(this);"/>
+             
+       <input type="button"
+             id = "btnSte["
+             name="brnStep"
+             class="normal_button"
+             disabled="disabled"
+             value="Step"
+             tabindex="3"
+             onclick="kernelStep(this);"/>
    </div>
    
    <div id="divUserProgramInput" style="height:215px; float:left">
@@ -89,26 +98,26 @@
       CPU Registers
       </label>
       <br>
-      <table id="CPU" border="1" height="190" width="110">
+      <table id="CPU1" border="1" height="190" width="110">
       <tr>
       	<td>PC</td>
-      	<td id="PC">0x00</td>
+      	<td id="PC1">0x00</td>
       </tr>
       <tr>
       	<td>ACC</td>
-      	<td id="ACC">0x00</td>
+      	<td id="ACC1">0x00</td>
       </tr>
       <tr>
       	<td>X Reg</td>
-      	<td id="XReg">0x00</td>
+      	<td id="XReg1">0x00</td>
       </tr>
       <tr>
       	<td>Y Reg</td>
-      	<td id="YReg">0x00</td>
+      	<td id="YReg1">0x00</td>
       </tr>
       <tr>
       	<td>Z Flag</td>
-      	<td id="ZFlag">0</td>
+      	<td id="ZFlag1">0x0</td>
       </tr>
       </table>
    </div>

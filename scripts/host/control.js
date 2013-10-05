@@ -105,8 +105,6 @@ function hostBtnStartOS_click(btn) {
     img.height = 500;
     img.width = 500;
 
-    console.log(ldScrNode);
-    console.log(document.getElementById("divConsole"));
     document.getElementById('divConsole').replaceChild(img, ldScrNode);
 
     window.setTimeout(function () {
@@ -188,7 +186,7 @@ function genMemoryTable() {
         rowLbl = mem.BLOCK_SIZE * i;
 
         rowLbl = decToHex(rowLbl);
-        td.appendChild(document.createTextNode(rowLbl));
+        td.appendChild(document.createTextNode("0x" + rowLbl));
 
         tr.appendChild(td);
 

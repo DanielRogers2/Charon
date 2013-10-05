@@ -6,7 +6,7 @@ function MMU() {
 
     //Programs only get 256 bytes of mem
     this.PROGRAM_ALLOWED_MEM = 256;
-    
+
     this.init = function() {
         // ????
     };
@@ -23,16 +23,18 @@ function MMU() {
         //Get PCB
         var pcb = _KernelCurrentProcess;
 
-        //wrap address inside program memory
-        var realAddr = addr % pcb.memLimit; 
-        
-        //Move over into programs actual address space
-        //TODO: Maybe add pages?
-        realAddr += pcb.memStart;
-
-        return _MEMORY.read(realAddr);
+        //Check address is in process memory
+        var maxAddr = pcb.memStart + pcb.memLimit;
+        if(addr <= maxAddr && addr >= pcb.memStart) {
+            //TODO: Maybe add pages?
+            return _MEMORY.read(addr);
+        }
+        else {
+            //MEM ACCESS VIOLATION!!!
+            _KernelInterruptQueue.enqueue(new Interrupt(SW_FATAL_IRQ, [1]));
+        }
     };
-    
+
     /*
      *  Writes a byte of data to the currently executing program's mem space
      *  
@@ -42,11 +44,18 @@ function MMU() {
      */
     this.write = function(addr, byte) {
         //Get PCB
+        //TODO: Clean this up so it's getting the PCB by PID
         var pcb = _KernelCurrentProcess;
-        
+
         var realAddr = addr % pcb.memLimit;
         realAddr += pcb.memStart;
-        
+
         _MEMORY.write(realAddr, byte);
+    };
+
+    this.zeroMem = function(pcb) {
+        for(var i = pcb.memStart; i < (pcb.memStart + pcb.memLimit); ++i) {
+            _MEMORY.write(i, '00');
+        }
     };
 }
