@@ -33,6 +33,8 @@ var SW_FATAL_IRQ = 4; //Software Fatal exception
 
 var PROG_EXIT = 5; //program complete
 
+var PROG_STEP = 6; //program step
+
 var CONSOLE_CANVASID = 0;
 var STATUS_CANVASID = 1;
 

@@ -114,6 +114,8 @@ function Cpu() {
         addr = hexToDec(addr);
 
         this.Acc = this.Acc + hexToDec(_MMU.read(addr));
+        //wrap to the value of a single byte
+        this.Acc %= 256;
 
         this.PC_INC(3);
     };
@@ -187,6 +189,10 @@ function Cpu() {
         var addr = hexToDec(databits.join(''));
 
         var nv = hexToDec(_MMU.read(addr)) + 1;
+        
+        //It's only a byte, so rollover if > 255
+        nv = nv % 256;
+        
         _MMU.write(addr, decToHex(nv));
 
         this.PC_INC(3);

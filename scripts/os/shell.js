@@ -237,6 +237,7 @@ function shellInit() {
     sc.action = function () {
         //Validate hex and load
         var rawProg = document.getElementById("taProgramInput").value;
+        
         //remove whitespace
         rawProg = rawProg.replace(/\s+/g, '').toUpperCase();
 
@@ -262,14 +263,15 @@ function shellInit() {
             //Create process control block
             var pcb = new PCB();
             
-            var memstart = 0;
             var pid = _KernelLoadedProcesses.length;
+            //TODO: Handle loading processes that are out of memory
+            var memstart = pid * 256;
             
             pcb.init(pid, memstart);
             
-            for(var i = memstart; i < progBytes.length; ++i) {
+            for(var i = 0; i < progBytes.length; ++i) {
                 //TODO: Check program size during load to prevent overflow
-                _MEMORY.write(i, progBytes[i]);
+                _MEMORY.write(i + memstart, progBytes[i]);
             }
             
             _KernelLoadedProcesses[pid] = pcb;
@@ -300,7 +302,7 @@ function shellInit() {
                 _KernelCurrentProcess.zeroRegisters();
                 
                 //TODO: Move this into context switch code for multiprogramming
-                _CPU.PC = _KernelCurrentProcess.PC; // Program Counter
+                _CPU.PC = _KernelCurrentProcess.PC; // Program Counter reset
                 _CPU.Acc = _KernelCurrentProcess.ACC; // Accumulator
                 _CPU.Xreg = _KernelCurrentProcess.Xreg; // X register
                 _CPU.Yreg = _KernelCurrentProcess.Yreg; // Y register
@@ -318,6 +320,47 @@ function shellInit() {
             _StdOut.putText("Please supply a PID");
         }
 
+    };
+    this.commandList[this.commandList.length] = sc;
+    
+    /*
+     * Step through a loaded program
+     */
+    sc = new ShellCommand();
+    sc.command = 'step';
+    sc.description = ' <pid> - single step a loaded program with <pid>';
+    sc.action = function (args) {
+        if(args.length > 0) {
+            if(args[0] in _KernelLoadedProcesses) {
+                //Have an actual process we can execute
+                //TODO: Put on ready queue and then execute for scheduling
+                _KernelCurrentProcess = _KernelLoadedProcesses[args[0]];
+                
+                //Clear junk data if needed
+                _KernelCurrentProcess.zeroRegisters();
+                
+                //TODO: Move this into context switch code for multiprogramming
+                _CPU.PC = _KernelCurrentProcess.memStart; // Program Counter at start of code
+                _CPU.Acc = _KernelCurrentProcess.ACC; // Accumulator
+                _CPU.Xreg = _KernelCurrentProcess.Xreg; // X register
+                _CPU.Yreg = _KernelCurrentProcess.Yreg; // Y register
+                _CPU.Zflag = _KernelCurrentProcess.Zflag; // Z-ero flag
+                
+                //Let them hit the step button to step through
+                document.getElementById('btnStep').disabled = false;
+                
+                _KernelCurrentProcess.state = "running";
+                
+                _StdOut.putText("Program Ready, hit Step button to step");
+                _StdOut.advanceLine();
+            }
+            else {
+                _StdOut.putText("No such process");
+            }
+        }
+        else {
+            _StdOut.putText("Please supply a PID");
+        }
     };
     this.commandList[this.commandList.length] = sc;
 

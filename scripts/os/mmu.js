@@ -24,12 +24,15 @@ function MMU() {
         var pcb = _KernelCurrentProcess;
 
         //Check address is in process memory
-        var maxAddr = pcb.memStart + pcb.memLimit;
-        if(addr <= maxAddr && addr >= pcb.memStart) {
+        if(addr < pcb.memLimit) {
             //TODO: Maybe add pages?
-            return _MEMORY.read(addr);
+            
+            //Read from address translated into process memory
+            return _MEMORY.read(addr + pcb.memStart);
         }
         else {
+            console.log(pcb);
+            console.log(addr);
             //MEM ACCESS VIOLATION!!!
             _KernelInterruptQueue.enqueue(new Interrupt(SW_FATAL_IRQ, [1]));
         }

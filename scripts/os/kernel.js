@@ -166,7 +166,18 @@ function krnBootstrap()      // Page 8.
         _StdOut.advanceLine();
         _StdOut.putText(_OsShell.promptStr);
         
+        //Disable step button on program exit if it was being stepped through
+        if(!document.getElementById('btnStep').disabled) {
+            document.getElementById('btnStep').disabled = true;
+        }
+        
         _CPU.isExecuting = false;
+    };
+    
+    //Handle program stepping
+    this.krnInterruptVector[PROG_STEP] = function(args) {
+        //Simplesimple
+        _CPU.cycle();
     };
     
     //Loads the memory management unit
@@ -307,6 +318,11 @@ function krnTimerISR(params)  // The built-in TIMER (not clock) Interrupt Servic
 //- WriteFile
 //- CloseFile
 
+//Steps program execution
+function kernelStep() {
+    //Registers an interrupt to execute one cycle of the program
+    _KernelInterruptQueue.enqueue(new Interrupt(PROG_STEP, []));
+}
 
 //OS Utility Routines
 

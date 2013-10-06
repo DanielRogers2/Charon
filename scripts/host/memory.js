@@ -11,6 +11,7 @@ function Memory() {
 
     this.init = function() {
 
+        //Initialize ram
         for ( var i = 0; i < Math.floor(this.SIZE / this.BLOCK_SIZE); ++i) {
             this.RAM[i] = [];
             
@@ -72,6 +73,11 @@ function Memory() {
      */
     this.updateDisplay = function(col, row, data) {
         var cellId = "tdr" + col + "c" + (row + 1);
-        document.getElementById(cellId).innerHTML = data;
+        
+        var del = document.getElementById(cellId).childNodes[0];
+        var dat = document.createTextNode(data);
+        
+        document.getElementById(cellId).replaceChild(dat, del);
+        
     };
 }
