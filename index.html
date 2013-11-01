@@ -13,7 +13,6 @@
 
    <!-- Host (Hardware Simulation) Routines -->
    <script type="text/javascript" src="scripts/host/control.js"></script>
-   <script type="text/javascript" src="scripts/host/devices.js"></script>
    <script type="text/javascript" src="scripts/host/cpu.js"></script>
    <script type="text/javascript" src="scripts/host/memory.js"></script>
 
@@ -35,11 +34,7 @@
    <!-- Other Routines -->
    <script type="text/javascript" src="scripts/utils.js"></script>
    <script type="text/javascript" src="http://www.labouseur.com/courses/os/projects/glados.js"></script>
-   
-   <!-- <script type="text/javascript" src="scripts/os/post.js"></script> -->
 </head>
-
-<body onload="hostInit();">
 
 <div id="divMain" style="width:100%;">
 	
@@ -50,7 +45,7 @@
              class="normal_button"
              value="Start"
              tabindex="0"
-             onclick="hostBtnStartOS_click(this);"/>
+             onclick="_HOST.startOS(this);"/>
 
       <input type="button"
              id = "btnHaltOS"
@@ -59,7 +54,7 @@
              disabled="disabled"
              value="Halt"
              tabindex="1"
-             onclick="hostBtnHaltOS_click(this);"/>
+             onclick="_HOST.haltOS();"/>
 
       <input type="button"
              id = "btnReset"
@@ -68,7 +63,7 @@
              disabled="disabled"
              value="Reset"
              tabindex="2"
-             onclick="hostBtnReset_click(this);"/>
+             onclick="_HOST.RESET();"/>
              
        <input type="button"
              id = "btnStep"
@@ -77,7 +72,7 @@
              disabled="disabled"
              value="Step"
              tabindex="3"
-             onclick="kernelStep(this);"/>
+             onclick="_HOST.kernel.programStep();"/>
    </div>
    
    <div id="divUserProgramInput" style="height:215px; float:left">

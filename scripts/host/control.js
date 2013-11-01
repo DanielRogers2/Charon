@@ -15,28 +15,36 @@
    Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
    ------------ */
 
-//Control Services
-function hostInit() {
-    _Canvases = [];
-    _Canvases[_Canvases.length] = document.getElementById('display');
-    _Canvases[_Canvases.length] = document.getElementById('status');
+window.onload = function() {
+    // Get the ball rolling
+    _HOST = new Host();
+};
+/**
+ * Get the base hardware interfaces set up
+ */
+function Host() {
+    this.screens = [];
+    this.screens[this.screens.length] = document.getElementById('display');
+    this.screens[this.screens.length] = document.getElementById('status');
 
-    _DrawingContexts = [];
+    this.contexts = [];
     // Get a global reference to the drawing context.
-    _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length]
-    .getContext('2d');
-    _DrawingContexts[_DrawingContexts.length] = _Canvases[_DrawingContexts.length]
-    .getContext('2d');
+    this.contexts[this.contexts.length] = this.screens[this.contexts.length]
+            .getContext('2d');
+    this.contexts[this.contexts.length] = this.screens[this.contexts.length]
+            .getContext('2d');
 
-    //Complete the memory table
-    genMemoryTable();
+    // ... Create and initialize the CPU ...
+    this.CPU = new CPU(this);
+    // Create memory
+    this.memory = new Memory(this);
+    this.kernel = undefined;
 
-    /*
-     * _DrawingContext = _Canvas.getContext('2d'); _StatusBarContext =
-     * _StatusBar.getContext('2d');
-     *  // Using HTML5 text functions _DrawingContext.font = _DefaultFontFamily;
-     * _StatusBarContext.font = _DefaultFontFamily;
-     */
+    this.clock = 0;
+    this.hardwareClockID = -1;
+
+    // Complete the memory display
+    this.genMemoryTable();
 
     // Clear the log text box.
     document.getElementById("taLog").value = "";
@@ -48,35 +56,11 @@ function hostInit() {
     if (typeof Glados === "function") {
         _GLaDOS = new Glados();
         _GLaDOS.init();
-    };
-
-}
-
-function hostLog(msg, source) {
-    // Check the source.
-    if (!source) {
-        source = "?";
     }
-
-    // Note the OS CLOCK.
-    var clock = _OSclock;
-
-    // Note the REAL clock in milliseconds since January 1, 1970.
-    var now = new Date().getTime();
-
-    // Build the log string.
-    var str = "({ clock:" + clock + ", source:" + source + ", msg:" + msg
-    + ", now:" + now + " })" + "\n";
-
-    // Update the log console.
-    var taLog = document.getElementById("taLog");
-    taLog.value = str + taLog.value;
-    // Optionally update a log database or some streaming service.
 }
 
-//Control Events
-
-function hostBtnStartOS_click(btn) {
+// Control Events
+Host.prototype.startOS = function(btn) {
     // Disable the start button...
     btn.disabled = true;
 
@@ -84,17 +68,8 @@ function hostBtnStartOS_click(btn) {
     document.getElementById("btnHaltOS").disabled = false;
     document.getElementById("btnReset").disabled = false;
 
-    // ... Create and initialize the CPU ...
-    _CPU = new Cpu();
-    _CPU.init();
-
-    // Create memory
-    _MEMORY = new Memory();
-    _MEMORY.init();
-
-
-    //Make our faux loading screen
-    var waitTime = 2300;    //how long the 'boot' takes 
+    // Make our faux loading screen
+    var waitTime = 2300; // how long the 'boot' takes
     // (2300 is ~= 1 full animation of the boot gif)
 
     var ldScrNode = document.getElementById('display');
@@ -107,34 +82,55 @@ function hostBtnStartOS_click(btn) {
 
     document.getElementById('divConsole').replaceChild(img, ldScrNode);
 
-    window.setTimeout(function () {
+    window.setTimeout(function() {
         document.getElementById('divConsole').replaceChild(ldScrNode, img);
     }, waitTime);
 
-    var loadComplete = function () {
+    var loadComplete = function(host) {
         // .. set focus on the OS console display ...
         document.getElementById("display").focus();
 
+        host.kernel = new Kernel(host);
         // ... then set the host clock pulse ...
-        _hardwareClockID = setInterval(hostClockPulse, CPU_CLOCK_INTERVAL);
-        krnBootstrap();
+        host.hardwareClockID = setInterval(function() {
+            host.clockPulse();
+        }, CPU_CLOCK_INTERVAL);
     };
 
     // .. and call the OS Kernel Bootstrap routine.
-    window.setTimeout(loadComplete, waitTime);
-}
+    window.setTimeout(loadComplete, waitTime, this);
+};
 
-function hostBtnHaltOS_click(btn) {
-    hostLog("emergency halt", "host");
-    hostLog("Attempting Kernel shutdown.", "host");
+Host.prototype.log = function(msg, source) {
+    // Check the source.
+    if (!source) {
+        source = "?";
+    }
+
+    // Note the REAL clock in milliseconds since January 1, 1970.
+    var now = new Date().getTime();
+
+    // Build the log string.
+    var str = "({ clock:" + this.clock + ", source:" + source + ", msg:" + msg
+            + ", now:" + now + " })" + "\n";
+
+    // Update the log console.
+    var taLog = document.getElementById("taLog");
+    taLog.value = str + taLog.value;
+    // Optionally update a log database or some streaming service.
+};
+
+Host.prototype.haltOS = function() {
+    this.log("emergency halt", "host");
+    this.log("Attempting Kernel shutdown.", "host");
     // Call the OS shutdown routine.
-    krnShutdown();
+    this.kernel.shutdown();
     // Stop the JavaScript interval that's simulating our clock pulse.
-    clearInterval(_hardwareClockID);
+    clearInterval(this.hardwareClockID);
     // TODO: Is there anything else we need to do here?
-}
+};
 
-function hostBtnReset_click(btn) {
+Host.prototype.RESET = function() {
     // The easiest and most thorough way to do this is to reload (not refresh)
     // the document.
     location.reload(true);
@@ -143,55 +139,54 @@ function hostBtnReset_click(btn) {
     // be reloaded from the server. If it is false or not specified, the browser
     // may reload the
     // page from its cache, which is not what we want.
-}
+};
 
 /*
  * Complete the memory table html element
  */
-function genMemoryTable() {
-    var mem = new Memory();
-    var width = mem.BLOCK_SIZE;
-    var height = mem.SIZE / width;
+Host.prototype.genMemoryTable = function() {
+    var width = this.memory.BLOCK_SIZE;
+    var height = this.memory.SIZE / width;
     var block = -1;
 
     var tblBody = document.createElement("tbody");
     var tr, td;
     var rowLbl;
 
-    for(var i = 0; i < height; ++i) {
+    for ( var i = 0; i < height; ++i) {
 
-        //Add in memory block separators
-        var cblock = Math.floor(i * mem.BLOCK_SIZE / 255);
-        
-        if(cblock > block) {
+        // Add in memory block separators
+        var cblock = Math.floor(i * this.memory.BLOCK_SIZE / 255);
+
+        if (cblock > block) {
             tr = document.createElement("tr");
             td = document.createElement("td");
-            td.appendChild(document 
-                    .createTextNode("Block: " + decToHex(cblock * 256)
-                            + " - " + decToHex( ( (cblock + 1) * 256) - 1 ) ) );
+            td.appendChild(document.createTextNode("Block: "
+                    + decToHex(cblock * 256) + " - "
+                    + decToHex(((cblock + 1) * 256) - 1)));
 
             tr.appendChild(td);
             tblBody.appendChild(tr);
-            
+
             block = cblock;
         }
 
         tr = document.createElement("tr");
-        tr.setAttribute("id", "tr"+i);
+        tr.setAttribute("id", "tr" + i);
 
-        //create row label
+        // create row label
         td = document.createElement("td");
 
-        //row starts at BLOCK_SIZE * number of rows
-        rowLbl = mem.BLOCK_SIZE * i;
+        // row starts at BLOCK_SIZE * number of rows
+        rowLbl = this.memory.BLOCK_SIZE * i;
 
         rowLbl = decToHex(rowLbl);
         td.appendChild(document.createTextNode("0x" + rowLbl));
 
         tr.appendChild(td);
 
-        for(var j = 1; j <= width; ++j) {
-            //Make memory cell
+        for ( var j = 1; j <= width; ++j) {
+            // Make memory cell
             td = document.createElement("td");
             td.setAttribute("id", "tdr" + i + "c" + j);
 
@@ -204,5 +199,69 @@ function genMemoryTable() {
     }
 
     document.getElementById("memory").appendChild(tblBody);
+};
 
-}
+/*
+ * Update memory display
+ */
+Host.prototype.updateMemDisplay = function(col, row, data) {
+    var cellId = "tdr" + col + "c" + (row + 1);
+
+    var del = document.getElementById(cellId).childNodes[0];
+    var dat = document.createTextNode(data);
+
+    document.getElementById(cellId).replaceChild(dat, del);
+};
+
+/*
+ * Update CPU display
+ */
+// Update HTML element display for cpu
+Host.prototype.updateCPUDisplay = function() {
+    document.getElementById("PC1").innerHTML = "0x" + decToHex(this.CPU.PC);
+    document.getElementById("ACC1").innerHTML = "0x" + decToHex(this.CPU.Acc);
+    document.getElementById("XReg1").innerHTML = "0x" + decToHex(this.CPU.Xreg);
+    document.getElementById("YReg1").innerHTML = "0x" + decToHex(this.CPU.Yreg);
+    document.getElementById("ZFlag1").innerHTML = "0x"
+            + decToHex(this.CPU.Zflag);
+};
+
+//
+// Hardware/Host Clock Pulse
+//
+Host.prototype.clockPulse = function() {
+    // Increment the hardware (host) clock.
+    this.clock++;
+    // Call the kernel clock pulse event handler.
+    this.kernel.onCPUClockPulse();
+};
+
+//
+// Keyboard Interrupt, a HARDWARE Interrupt Request. (See pages 560-561 in text
+// book.)
+//
+Host.prototype.enableKeyboardInterrupt = function() {
+    // Listen for key press (keydown, actually) events in the Document
+    // and call the simulation processor, which will in turn call the
+    // OS interrupt handler.
+    document.addEventListener("keydown", onKeypress, false);
+};
+
+Host.prototype.disableKeyboardInterrupt = function() {
+    document.removeEventListener("keydown", onKeypress, false);
+};
+
+function onKeypress(event) {
+    // The canvas element CAN receive focus if you give it a tab index, which we
+    // have.
+    // Check that we are processing keystrokes only from the canvas's id (as set
+    // in index.html).
+    if (event.target.id == "display") {
+        event.preventDefault();
+        // Note the pressed key code in the params (Mozilla-specific).
+        var params = new Array(event.which, event.shiftKey);
+        // Enqueue this interrupt on the kernel interrupt queue so that it gets
+        // to the Interrupt handler.
+        _HOST.kernel.queueInterrupt(_HOST.kernel.KEYBOARD_IRQ, params);
+    }
+};

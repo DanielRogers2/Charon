@@ -13,7 +13,7 @@
    Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
    ------------ */
 
-function Cpu() {
+function CPU(host) {
     this.PC = 0; // Program Counter
     this.Acc = 0; // Accumulator
     this.Xreg = 0; // X register
@@ -21,67 +21,12 @@ function Cpu() {
     this.Zflag = 0; // Z-ero flag (Think of it as "isZero".)
     this.isExecuting = false;
 
-    this.init = function() {
-        this.PC = 0;
-        this.Acc = 0;
-        this.Xreg = 0;
-        this.Yreg = 0;
-        this.Zflag = 0;
-        this.isExecuting = false;
-    };
-
-    this.cycle = function() {
-        krnTrace("CPU cycle");
-        // TODO: Accumulate CPU usage and profiling statistics here.
-        // Do the real work here. Be sure to set this.isExecuting appropriately.
-        // Fetch
-        var data = this.FETCH();
-        // Decode
-        var op = data[0];
-        //data is stored with high-byte in low memory
-        var databits = data.slice(1).reverse();
-
-        if(op in this) {
-            // Execute instruction
-            this[op](databits);
-        }
-        else {
-            _KernelInterruptQueue.enqueue(new Interrupt(SW_FATAL_IRQ, [0]));
-            _CPU.isExecuting = false;
-        }
-        this.updateDisplay();
-    };
-
-    // Utility functions
-
-    // Increment the program counter by the correct number of bytes
-    this.PC_INC = function(bytes) {
-        // Programs only get 256bytes of memory -- 0-255
-        this.PC = (this.PC + bytes) % 256;
-    };
-
-    // Fetch instruction
-    // returns an array containing hex data for the instruction
-    // [opcode byte, databyte1, databyte2, ...]
-    this.FETCH = function() {
-        var data = [];
-
-        var cbyte = this.PC;
-
-        // Opcodes use a max of 3 bytes
-        for ( var i = 0; i < 3; ++i) {
-            // read in all bytes
-            data[i] = _MMU.read(cbyte);
-            ++cbyte;
-        }
-
-        return data;
-    };
+    this.kernel = undefined;
+    this.host = host;
 
     // CPU Instruction
-
     // Databits argument is the rest of the bits following the opcode
-    //      expressed as an array of 2-value hex digits
+    // expressed as an array of 2-value hex digits
     // LDA -- load Acc with constant
     this['A9'] = function(databits) {
         this.Acc = hexToDec(databits[1]);
@@ -90,12 +35,12 @@ function Cpu() {
 
     // LDA -- load Acc from mem
     this['AD'] = function(databits) {
-        //Get full address
+        // Get full address
         var addr = databits.join('');
-        //convert to decimal for read()
+        // convert to decimal for read()
         addr = hexToDec(addr);
 
-        this.Acc = hexToDec(_MMU.read(addr));
+        this.Acc = hexToDec(this.kernel.MMU.read(addr));
         this.PC_INC(3);
     };
 
@@ -104,7 +49,7 @@ function Cpu() {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        _MMU.write(addr, decToHex(this.Acc));
+        this.kernel.MMU.write(addr, decToHex(this.Acc));
         this.PC_INC(3);
     };
 
@@ -113,8 +58,8 @@ function Cpu() {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Acc = this.Acc + hexToDec(_MMU.read(addr));
-        //wrap to the value of a single byte
+        this.Acc = this.Acc + hexToDec(this.kernel.MMU.read(addr));
+        // wrap to the value of a single byte
         this.Acc %= 256;
 
         this.PC_INC(3);
@@ -131,8 +76,8 @@ function Cpu() {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Xreg = hexToDec(_MMU.read(addr));
-        
+        this.Xreg = hexToDec(this.kernel.MMU.read(addr));
+
         this.PC_INC(3);
     };
 
@@ -147,19 +92,19 @@ function Cpu() {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Yreg = hexToDec(_MMU.read(addr));
+        this.Yreg = hexToDec(this.kernel.MMU.read(addr));
         this.PC_INC(3);
     };
 
     // NOP --
     this['EA'] = function(databits) {
-        //do nothing
+        // do nothing
         this.PC_INC(1);
     };
 
     // BRK -- BREAK: execution exit
     this['00'] = function(databits) {
-        _KernelInterruptQueue.enqueue(new Interrupt(PROG_EXIT, []));
+        this.kernel.queueInterrupt(this.kernel.PROG_EXIT, []);
     };
 
     // CPX -- compare Xreg to data in mem
@@ -167,18 +112,17 @@ function Cpu() {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Zflag = (this.Xreg == hexToDec(_MMU.read(addr)));
+        this.Zflag = (this.Xreg == hexToDec(this.kernel.MMU.read(addr)));
         this.PC_INC(3);
     };
 
     // BNE -- branch if Zflag == 0
     this['D0'] = function(databits) {
-        if(this.Zflag == 0) {
+        if (this.Zflag == 0) {
             var jmpBytes = hexToDec(databits[1]);
 
             this.PC_INC(jmpBytes + 2);
-        }
-        else {
+        } else {
             this.PC_INC(2);
         }
 
@@ -188,30 +132,64 @@ function Cpu() {
     this['EE'] = function(databits) {
         var addr = hexToDec(databits.join(''));
 
-        var nv = hexToDec(_MMU.read(addr)) + 1;
-        
-        //It's only a byte, so rollover if > 255
+        var nv = hexToDec(this.kernel.MMU.read(addr)) + 1;
+
+        // It's only a byte, so rollover if > 255
         nv = nv % 256;
-        
-        _MMU.write(addr, decToHex(nv));
+
+        this.kernel.MMU.write(addr, decToHex(nv));
 
         this.PC_INC(3);
     };
 
     // SYS -- system call
     this['FF'] = function(databits) {
-        _KernelInterruptQueue.enqueue(new Interrupt(SYS_IRQ, []));
-
+        this.kernel.queueInterrupt(this.kernel.SYS_IRQ, []);
         this.PC_INC(1);
     };
-
-    //Update HTML element display for cpu
-    this.updateDisplay = function() {
-        document.getElementById("PC1").innerHTML    = "0x" + decToHex(this.PC);
-        document.getElementById("ACC1").innerHTML   = "0x" + decToHex(this.Acc);
-        document.getElementById("XReg1").innerHTML  = "0x" + decToHex(this.Xreg);
-        document.getElementById("YReg1").innerHTML  = "0x" + decToHex(this.Yreg);
-        document.getElementById("ZFlag1").innerHTML = "0x" + decToHex(this.Zflag);
-    };
-
 }
+
+CPU.prototype.cycle = function() {
+    this.kernel.trace("CPU cycle");
+    // TODO: Accumulate CPU usage and profiling statistics here.
+    // Do the real work here. Be sure to set this.isExecuting appropriately.
+    // Fetch
+    var data = this.FETCH();
+    // Decode
+    var op = data[0];
+    // data is stored with high-byte in low memory
+    var databits = data.slice(1).reverse();
+
+    if (op in this) {
+        // Execute instruction
+        this[op](databits);
+    } else {
+        this.kernel.queueInterrupt(this.kernel.SW_FATAL_IRQ, [ 0 ]);
+        this.isExecuting = false;
+    }
+    this.host.updateCPUDisplay();
+};
+
+// Increment the program counter by the correct number of bytes
+CPU.prototype.PC_INC = function(bytes) {
+    // Programs only get 256bytes of memory -- 0-255
+    this.PC = (this.PC + bytes) % 256;
+};
+
+// Fetch instruction
+// returns an array containing hex data for the instruction
+// [opcode byte, databyte1, databyte2, ...]
+CPU.prototype.FETCH = function() {
+    var data = [];
+
+    var cbyte = this.PC;
+
+    // Opcodes use a max of 3 bytes
+    for ( var i = 0; i < 3; ++i) {
+        // read in all bytes
+        data[i] = this.kernel.MMU.read(cbyte);
+        ++cbyte;
+    }
+
+    return data;
+};

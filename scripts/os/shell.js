@@ -5,175 +5,163 @@
    ------------ */
 
 //TODO: Write a base class / prototype for system services and let Shell inherit from it.
-
-function Shell() {
+function Shell(kernel) {
     // Properties
-    this.promptStr   = "$";
+    this.promptStr = "$";
     this.commandList = [];
-    this.curses      = "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]";
-    this.apologies   = "[sorry]";
-    // Methods
-    this.init        = shellInit;
-    this.putPrompt   = shellPutPrompt;
-    this.handleInput = shellHandleInput;
-    this.execute     = shellExecute;
-}
+    this.curses = "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]";
+    this.apologies = "[sorry]";
+    this.kernel = kernel;
+    this.stdOut = this.kernel.stdOut;
+    this.stdIn = this.kernel.stdIn;
 
-function shellInit() {
-    var sc = null;
     //
     // Load the command list.
+    var sc = undefined;
+    var shell = this;
 
     /*
      * ver
-     */ 
+     */
     sc = new ShellCommand();
     sc.command = "ver";
     sc.description = "- Displays the current version data.";
     sc.action = function shellVer() {
-        _StdIn.putText(APP_NAME + " version " + APP_VERSION);
+        shell.stdOut.putText(APP_NAME + " version " + APP_VERSION);
     };
     this.commandList[this.commandList.length] = sc;
 
     /*
      * help
-     */ 
+     */
     sc = new ShellCommand();
     sc.command = "help";
     sc.description = "- This is the help command. Seek help.";
-    sc.action = function shellHelp () {
-        _StdIn.putText("Commands:");
-        for (var i in _OsShell.commandList)
-        {
-            _StdIn.advanceLine();
-            _StdIn.putText("  " + _OsShell.commandList[i].command + " " + _OsShell.commandList[i].description);
+    sc.action = function shellHelp() {
+        shell.stdOut.putText("Commands:");
+        for ( var i in shell.commandList) {
+            shell.stdOut.advanceLine();
+            shell.stdOut.putText("  " + shell.commandList[i].command + " "
+                    + shell.commandList[i].description);
         }
     };
     this.commandList[this.commandList.length] = sc;
 
     /*
      * shutdown
-     */ 
+     */
     sc = new ShellCommand();
     sc.command = "shutdown";
     sc.description = "- Shuts down the virtual OS but leaves the underlying hardware simulation running.";
-    sc.action = function shellShutdown () {
-        _StdIn.putText("Shutting down...");
+    sc.action = function shellShutdown() {
+        shell.stdOut.putText("Shutting down...");
         // Call Kernel shutdown routine.
-        krnShutdown();   
-        // TODO: Stop the final prompt from being displayed.  If possible.  Not a high priority.  (Damn OCD!)
+        shell.kernel.Shutdown();
+        // TODO: Stop the final prompt from being displayed. If possible. Not a
+        // high priority. (Damn OCD!)
     };
     this.commandList[this.commandList.length] = sc;
 
     /*
      * cls
-     */ 
+     */
     sc = new ShellCommand();
     sc.command = "cls";
     sc.description = "- Clears the screen and resets the cursor position.";
-    sc.action = function shellCls () {
-        _StdIn.clearScreen();
-        _StdIn.resetXY();
+    sc.action = function shellCls() {
+        shell.stdOut.clearScreen();
+        shell.stdOut.resetXY();
     };
     this.commandList[this.commandList.length] = sc;
 
     /*
      * man <topic>
-     */ 
+     */
     sc = new ShellCommand();
     sc.command = "man";
     sc.description = "<topic> - Displays the MANual page for <topic>.";
-    sc.action = function shellMan (args) {
-        if (args.length > 0)
-        {
+    sc.action = function shellMan(args) {
+        if (args.length > 0) {
             var topic = args[0];
-            switch (topic)
-            {
-            case "help": 
-                _StdIn.putText("Help displays a list of (hopefully) valid commands.");
+            switch (topic) {
+            case "help":
+                shell.stdOut
+                        .putText("Help displays a list of (hopefully) valid commands.");
                 break;
             default:
-                _StdIn.putText("No manual entry for " + args[0] + ".");
+                shell.stdOut.putText("No manual entry for " + args[0] + ".");
             }
-        }
-        else
-        {
-            _StdIn.putText("Usage: man <topic>  Please supply a topic.");
+        } else {
+            shell.stdOut.putText("Usage: man <topic>  Please supply a topic.");
         }
     };
     this.commandList[this.commandList.length] = sc;
 
     /*
      * trace <on | off>
-     */ 
+     */
     sc = new ShellCommand();
     sc.command = "trace";
     sc.description = "<on | off> - Turns the OS trace on or off.";
-    sc.action = function shellTrace (args){
-        if (args.length > 0)
-        {
+    sc.action = function shellTrace(args) {
+        if (args.length > 0) {
             var setting = args[0];
-            switch (setting)
-            {
-            case "on": 
-                if (_Trace && _SarcasticMode)
-                {
-                    _StdIn.putText("Trace is already on, dumbass.");
-                }
-                else
-                {
+            switch (setting) {
+            case "on":
+                if (_Trace && _SarcasticMode) {
+                    shell.stdOut.putText("Trace is already on, dumbass.");
+                } else {
                     _Trace = true;
-                    _StdIn.putText("Trace ON");
+                    shell.stdOut.putText("Trace ON");
                 }
 
                 break;
-            case "off": 
+            case "off":
                 _Trace = false;
-                _StdIn.putText("Trace OFF");                
-                break;                
+                shell.stdOut.putText("Trace OFF");
+                break;
             default:
-                _StdIn.putText("Invalid arguement.  Usage: trace <on | off>.");
-            }        
-        }
-        else
-        {
-            _StdIn.putText("Usage: trace <on | off>");
+                shell.stdOut
+                        .putText("Invalid arguement.  Usage: trace <on | off>.");
+            }
+        } else {
+            shell.stdOut.putText("Usage: trace <on | off>");
         }
     };
     this.commandList[this.commandList.length] = sc;
 
     /*
      * rot13 <string>
-     */ 
+     */
     sc = new ShellCommand();
     sc.command = "rot13";
     sc.description = "<string> - Does rot13 obfuscation on <string>.";
-    sc.action = function shellRot13 (args) {
-        if (args.length > 0)
-        {
-            _StdIn.putText(args[0] + " = '" + rot13(args[0]) +"'");     // Requires Utils.js for rot13() function.
-        }
-        else
-        {
-            _StdIn.putText("Usage: rot13 <string>  Please supply a string.");
+    sc.action = function shellRot13(args) {
+        if (args.length > 0) {
+            shell.stdOut.putText(args[0] + " = '" + rot13(args[0]) + "'"); // Requires
+            // Utils.js
+            // for
+            // rot13()
+            // function.
+        } else {
+            shell.stdOut
+                    .putText("Usage: rot13 <string>  Please supply a string.");
         }
     };
     this.commandList[this.commandList.length] = sc;
 
     /*
      * prompt <string>
-     */ 
+     */
     sc = new ShellCommand();
     sc.command = "prompt";
     sc.description = "<string> - Sets the prompt.";
-    sc.action = function shellPrompt (args) {
-        if (args.length > 0)
-        {
-            _OsShell.promptStr = args[0];
-        }
-        else
-        {
-            _StdIn.putText("Usage: prompt <string>  Please supply a string.");
+    sc.action = function shellPrompt(args) {
+        if (args.length > 0) {
+            shell.promptStr = args[0];
+        } else {
+            shell.stdOut
+                    .putText("Usage: prompt <string>  Please supply a string.");
         }
     };
     this.commandList[this.commandList.length] = sc;
@@ -188,27 +176,25 @@ function shellInit() {
         var date = new Date();
         var clock = new Clock();
 
-        //Dayofweek, Month dd, yyyy at hh:mm:ss
-        _StdOut.putText(clock.getDateString(date) + " at " + clock.getTimeString(date));
+        // Dayofweek, Month dd, yyyy at hh:mm:ss
+        shell.stdOut.putText(clock.getDateString(date) + " at "
+                + clock.getTimeString(date));
 
-        //you could also do
-        //_StdOut.putText(date.toString())
-        //but mine is cooler
-
-        //_KernelTimedEventQueue.enqueue(onTick);
-        //_KernelInterruptQueue.enqueue(new Interrupt(TIMER_IRQ, []));
+        // you could also do
+        // shell.stdOut.putText(date.toString())
+        // but mine is cooler
     };
     this.commandList[this.commandList.length] = sc;
 
     /*
      * whereami
-     */ 
+     */
     sc = new ShellCommand();
     sc.command = "whereami";
     sc.description = " - Shows the current location of the system";
-    sc.action = function shellLocation () {
-        //yuca mountain
-        _StdOut.putText("36 degrees 56' 25\" N, 116 degrees 29' 06\" W");
+    sc.action = function shellLocation() {
+        // yuca mountain
+        shell.stdOut.putText("36 degrees 56' 25\" N, 116 degrees 29' 06\" W");
     };
     this.commandList[this.commandList.length] = sc;
 
@@ -218,12 +204,12 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "status";
     sc.description = " - Set the status bar status message.";
-    sc.action = function (args) {
+    sc.action = function(args) {
         if (args.length > 0) {
-            _StatusBar.updateStatus(args.join(" "));
-        }
-        else {
-            _StdIn.putText("Usage: status <string>  Please supply a string.");
+            shell.kernel.statusBar.updateStatus(args.join(" "));
+        } else {
+            shell.stdOut
+                    .putText("Usage: status <string>  Please supply a string.");
         }
     };
     this.commandList[this.commandList.length] = sc;
@@ -234,132 +220,118 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = 'load';
     sc.description = ' - loads a program from the program entry';
-    sc.action = function () {
-        //Validate hex and load
+    sc.action = function() {
+        // Validate hex and load
         var rawProg = document.getElementById("taProgramInput").value;
-        
-        //remove whitespace
+
+        // remove whitespace
         rawProg = rawProg.replace(/\s+/g, '').toUpperCase();
 
-        //if not A-F,0-9then it's not valid hex
+        // if not A-F,0-9then it's not valid hex
         var invExp = new RegExp("[^A-F0-9\n]", "m");
         var valExp = new RegExp("[A-F0-9]", "m");
-        
+
         var invalid = invExp.test(rawProg);
-        //check if multiple of 2 values (full byes)
+        // check if multiple of 2 values (full byes)
         invalid &= ((rawProg % 2) != 0);
+        // Maximum size of 256 for now
+        invalid &= (rawProg.length > 256);
+
         var valid = valExp.test(rawProg);
 
-        if(!invalid && valid) {
-            _StdOut.putText("Loaded Program");
-            _StdOut.advanceLine();
-            
-            //split into dual-hex blocks
+        if (!invalid && valid) {
+            shell.stdOut.putText("Loaded Program");
+            shell.stdOut.advanceLine();
+
+            // split into dual-hex blocks
             var progBytes = [];
-            for(var i = 0; i < rawProg.length; i+=2) {
-                progBytes[i / 2] = rawProg.slice(i, i+2);
+            for ( var i = 0; i < rawProg.length; i += 2) {
+                progBytes[i / 2] = rawProg.slice(i, i + 2);
             }
-            
-            //Create process control block
-            var pcb = new PCB();
-            
-            var pid = _KernelLoadedProcesses.length;
-            //TODO: Handle loading processes that are out of memory
+
+            // Create process control block
+            var pcb = new PCB(shell.kernel);
+
+            var pid = shell.kernel.loadedProcesses.length;
+            // TODO: Handle loading processes that are out of memory
             var memstart = pid * 256;
-            
+
             pcb.init(pid, memstart);
-            
-            for(var i = 0; i < progBytes.length; ++i) {
-                //TODO: Check program size during load to prevent overflow
-                _MEMORY.write(i + memstart, progBytes[i]);
+
+            for ( var i = 0; i < progBytes.length; ++i) {
+                // TODO: Check program size during load to prevent overflow
+                shell.kernel.memory.write(i + memstart, progBytes[i]);
             }
-            
-            _KernelLoadedProcesses[pid] = pcb;
-            
-            _StdOut.putText("PID: " + pid);
-        }
-        else {
-            _StdOut.putText("Invalid Program!");
+
+            shell.kernel.loadedProcesses[pid] = pcb;
+
+            shell.stdOut.putText("PID: " + pid);
+        } else {
+            shell.stdOut.putText("Invalid Program!");
         }
 
     };
     this.commandList[this.commandList.length] = sc;
-    
+
     /*
      * Run a loaded program
      */
     sc = new ShellCommand();
     sc.command = 'run';
     sc.description = ' <pid> - run a loaded program with <pid>';
-    sc.action = function (args) {
-        if(args.length > 0) {
-            if(args[0] in _KernelLoadedProcesses) {
-                //Have an actual process we can execute
-                //TODO: Put on ready queue and then execute for scheduling
-                _KernelCurrentProcess = _KernelLoadedProcesses[args[0]];
-                
-                //Clear junk data if needed
-                _KernelCurrentProcess.zeroRegisters();
-                
-                //TODO: Move this into context switch code for multiprogramming
-                _CPU.PC = _KernelCurrentProcess.PC; // Program Counter reset
-                _CPU.Acc = _KernelCurrentProcess.ACC; // Accumulator
-                _CPU.Xreg = _KernelCurrentProcess.Xreg; // X register
-                _CPU.Yreg = _KernelCurrentProcess.Yreg; // Y register
-                _CPU.Zflag = _KernelCurrentProcess.Zflag; // Z-ero flag
-                
-                _KernelCurrentProcess.state = "running";
-                
-                _CPU.isExecuting = true;
+    sc.action = function(args) {
+        if (args.length > 0) {
+            if (args[0] in shell.kernel.loadedProcesses) {
+                // Have an actual process we can execute
+                // TODO: Put on ready queue and then execute for scheduling
+                shell.kernel.activeProcess = shell.kernel.loadedProcesses[args[0]];
+
+                // Clear junk data if needed
+                shell.kernel.activeProcess.zeroRegisters();
+
+                shell.kernel.activeProcess.load();
+                shell.kernel.activeProcess.state = "running";
+
+                shell.kernel.CPU.isExecuting = true;
+            } else {
+                shell.stdOut.putText("No such process");
             }
-            else {
-                _StdOut.putText("No such process");
-            }
-        }
-        else {
-            _StdOut.putText("Please supply a PID");
+        } else {
+            shell.stdOut.putText("Please supply a PID");
         }
 
     };
     this.commandList[this.commandList.length] = sc;
-    
+
     /*
      * Step through a loaded program
      */
     sc = new ShellCommand();
     sc.command = 'step';
     sc.description = ' <pid> - single step a loaded program with <pid>';
-    sc.action = function (args) {
-        if(args.length > 0) {
-            if(args[0] in _KernelLoadedProcesses) {
-                //Have an actual process we can execute
-                //TODO: Put on ready queue and then execute for scheduling
-                _KernelCurrentProcess = _KernelLoadedProcesses[args[0]];
-                
-                //Clear junk data if needed
-                _KernelCurrentProcess.zeroRegisters();
-                
-                //TODO: Move this into context switch code for multiprogramming
-                _CPU.PC = _KernelCurrentProcess.memStart; // Program Counter at start of code
-                _CPU.Acc = _KernelCurrentProcess.ACC; // Accumulator
-                _CPU.Xreg = _KernelCurrentProcess.Xreg; // X register
-                _CPU.Yreg = _KernelCurrentProcess.Yreg; // Y register
-                _CPU.Zflag = _KernelCurrentProcess.Zflag; // Z-ero flag
-                
-                //Let them hit the step button to step through
+    sc.action = function(args) {
+        if (args.length > 0) {
+            if (args[0] in shell.kernel.loadedProcesses) {
+                // Have an actual process we can execute
+                // TODO: Put on ready queue and then execute for scheduling
+                shell.kernel.activeProcess = shell.kernel.loadedProcesses[args[0]];
+
+                // Clear junk data if needed
+                shell.kernel.activeProcess.zeroRegisters();
+
+                shell.kernel.activeProcess.load();
+                // Let them hit the step button to step through
                 document.getElementById('btnStep').disabled = false;
-                
-                _KernelCurrentProcess.state = "running";
-                
-                _StdOut.putText("Program Ready, hit Step button to step");
-                _StdOut.advanceLine();
+
+                shell.kernel.activeProcess.state = "running";
+
+                shell.stdOut.putText("Program Ready, hit Step button to step");
+                shell.stdOut.advanceLine();
+            } else {
+                shell.stdOut.putText("No such process");
             }
-            else {
-                _StdOut.putText("No such process");
-            }
-        }
-        else {
-            _StdOut.putText("Please supply a PID");
+        } else {
+            shell.stdOut.putText("Please supply a PID");
         }
     };
     this.commandList[this.commandList.length] = sc;
@@ -370,8 +342,8 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = 'crash';
     sc.description = ' - crashes';
-    sc.action = function () {
-        krnTrapError("forced crash");
+    sc.action = function() {
+        shell.kernel.trapError("forced crash");
     };
     this.commandList[this.commandList.length] = sc;
 
@@ -381,94 +353,97 @@ function shellInit() {
     sc = new ShellCommand();
     sc.command = "countdown";
     sc.description = " - ????";
-    sc.action = function secret () {
-        //it's cooler if it scrolls slowly
-        clearInterval(_hardwareClockID);
-        _hardwareClockID = setInterval(hostClockPulse, 300);
+    sc.action = function secret() {
+        // it's cooler if it scrolls slowly
+        clearInterval(shell.kernel.host.hardwareClockID);
+        shell.kernel.host.hardwareClockID = setInterval(function() {
+            shell.kernel.host.clockPulse();
+        }, 300);
 
-        _StdOut.putText("Ground Control to Major Tom");
-        _StdOut.advanceLine();
-        _StdOut.putText("Ground Control to Major Tom");
-        _StdOut.advanceLine();
-        _StdOut.putText("Take your protein pills and put your helmet on");
-        _StdOut.advanceLine();
-        _StdOut.advanceLine();
-        _StdOut.putText("Ground Control to Major Tom");
-        _StdOut.advanceLine();
-        _StdOut.putText("Commencing countdown, engines on");
-        _StdOut.advanceLine();
-        _StdOut.putText("Check ignition and may God's love be with you");
-        _StdOut.advanceLine();
-        _StdOut.advanceLine();
-        _StdOut.putText("Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two, One, Liftoff");
-        _StdOut.advanceLine();
-        _StdOut.advanceLine();
-        _StdOut.putText("This is Ground Control to Major Tom");
-        _StdOut.advanceLine();
-        _StdOut.putText("You've really made the grade");
-        _StdOut.advanceLine();
-        _StdOut.putText("And the papers want to know whose shirts you wear");
-        _StdOut.advanceLine();
-        _StdOut.putText("Now it's time to leave the capsule if you dare");
-        _StdOut.advanceLine();
-        _StdOut.advanceLine();
-        _StdOut.putText('"This is Major Tom to Ground Control');
-        _StdOut.advanceLine();
-        _StdOut.putText("I'm stepping through the door");
-        _StdOut.advanceLine();
-        _StdOut.putText("And I'm floating in a most peculiar way");
-        _StdOut.advanceLine();
-        _StdOut.putText("And the stars look very different today");
-        _StdOut.advanceLine();
-        _StdOut.advanceLine();
-        _StdOut.putText("For here");
-        _StdOut.advanceLine();
-        _StdOut.putText("Am I sitting in a tin can");
-        _StdOut.advanceLine();
-        _StdOut.putText("Far above the world");
-        _StdOut.advanceLine();
-        _StdOut.putText("Planet Earth is blue");
-        _StdOut.advanceLine();
-        _StdOut.putText("And there's nothing I can do");
-        _StdOut.advanceLine();
-        _StdOut.advanceLine();
-        _StdOut.putText("Though I'm past one hundred thousand miles");
-        _StdOut.advanceLine();
-        _StdOut.putText("I'm feeling very still");
-        _StdOut.advanceLine();
-        _StdOut.putText("And I think my spaceship knows which way to go");
-        _StdOut.advanceLine();
-        _StdOut.putText('Tell my wife I love her very much she knows"');
-        _StdOut.advanceLine();
-        _StdOut.advanceLine();
-        _StdOut.putText("Ground Control to Major Tom");
-        _StdOut.advanceLine();
-        _StdOut.putText("Your circuit's dead, there's something wrong");
-        _StdOut.advanceLine();
-        _StdOut.putText("Can you hear me, Major Tom?");
-        _StdOut.advanceLine();
-        _StdOut.putText("Can you hear me, Major Tom?");
-        _StdOut.advanceLine();
-        _StdOut.putText("Can you hear me, Major Tom?");
-        _StdOut.advanceLine();
-        _StdOut.putText("Can you....");
-        _StdOut.advanceLine();
-        _StdOut.advanceLine();
-        _StdOut.putText('"Here am I floating round my tin can');
-        _StdOut.advanceLine();
-        _StdOut.putText("Far above the Moon");
-        _StdOut.advanceLine();
-        _StdOut.putText("Planet Earth is blue");
-        _StdOut.advanceLine();
-        _StdOut.putText('And there\'s nothing I can do."');
+        shell.stdOut.putText("Ground Control to Major Tom");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Ground Control to Major Tom");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Take your protein pills and put your helmet on");
+        shell.stdOut.advanceLine();
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Ground Control to Major Tom");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Commencing countdown, engines on");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Check ignition and may God's love be with you");
+        shell.stdOut.advanceLine();
+        shell.stdOut.advanceLine();
+        shell.stdOut
+                .putText("Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two, One, Liftoff");
+        shell.stdOut.advanceLine();
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("This is Ground Control to Major Tom");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("You've really made the grade");
+        shell.stdOut.advanceLine();
+        shell.stdOut
+                .putText("And the papers want to know whose shirts you wear");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Now it's time to leave the capsule if you dare");
+        shell.stdOut.advanceLine();
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText('"This is Major Tom to Ground Control');
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("I'm stepping through the door");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("And I'm floating in a most peculiar way");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("And the stars look very different today");
+        shell.stdOut.advanceLine();
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("For here");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Am I sitting in a tin can");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Far above the world");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Planet Earth is blue");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("And there's nothing I can do");
+        shell.stdOut.advanceLine();
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Though I'm past one hundred thousand miles");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("I'm feeling very still");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("And I think my spaceship knows which way to go");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText('Tell my wife I love her very much she knows"');
+        shell.stdOut.advanceLine();
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Ground Control to Major Tom");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Your circuit's dead, there's something wrong");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Can you hear me, Major Tom?");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Can you hear me, Major Tom?");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Can you hear me, Major Tom?");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Can you....");
+        shell.stdOut.advanceLine();
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText('"Here am I floating round my tin can');
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Far above the Moon");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText("Planet Earth is blue");
+        shell.stdOut.advanceLine();
+        shell.stdOut.putText('And there\'s nothing I can do."');
 
-        //reset the timer so they don't deal with sluggish response times
-        var crash = function () {
-            krnTrapError("BSOD");
+        // reset the timer so they don't deal with sluggish response times
+        var crash = function() {
+            shell.kernel.trapError("BSOD");
         };
 
-        _KernelInterruptQueue.enqueue(new Interrupt(TIMER_IRQ, [null, crash]));
-
+        shell.kernel.queueInterrupt(shell.kernel.TIMER_IRQ, [ null, crash ]);
     };
     this.commandList[this.commandList.length] = sc;
 
@@ -477,68 +452,80 @@ function shellInit() {
 
     //
     // Display the initial prompt.
-    this.putPrompt();
+    this.prompt();
 }
 
-function shellPutPrompt()
-{
-    _StdIn.putText(this.promptStr);
-}
+Shell.prototype.prompt = function() {
+    this.stdIn.putText(this.promptStr);
+};
 
-function shellHandleInput(buffer)
-{
-    krnTrace("Shell Command~" + buffer);
+/**
+ * Handles execution of user commands
+ * 
+ * @param buffer
+ */
+Shell.prototype.handleInput = function(buffer) {
+    this.kernel.trace("Shell Command~" + buffer);
     // 
     // Parse the input...
     //
     var userCommand = new UserCommand();
-    userCommand = shellParseInput(buffer);
+    userCommand = this.parseInput(buffer);
     // ... and assign the command and args to local variables.
     var cmd = userCommand.command;
     var args = userCommand.args;
+    var fn = undefined;
+
     //
     // Determine the command and execute it.
     //
-    // JavaScript may not support associative arrays in all browsers so we have to
-    // iterate over the command list in attempt to find a match.  TODO: Is there a better way? Probably.
+    // JavaScript may not support associative arrays in all browsers so we have
+    // to
+    // iterate over the command list in attempt to find a match. TODO: Is there
+    // a better way? Probably.
     var index = 0;
     var found = false;
-    while (!found && index < this.commandList.length)
-    {
-        if (this.commandList[index].command === cmd)
-        {
+    while (!found && index < this.commandList.length) {
+        if (this.commandList[index].command === cmd) {
             found = true;
-            var fn = this.commandList[index].action;
-        }
-        else
-        {
+            fn = this.commandList[index].action;
+        } else {
             ++index;
         }
     }
-    if (found)
-    {
+    if (found) {
         this.execute(fn, args);
+    } else {
+        // It's not found, so check for curses and apologies before declaring
+        // the command invalid.
+        if (this.curses.indexOf("[" + rot13(cmd) + "]") >= 0) {
+            // Check for curses.
+            var shell = this;
+            this.execute(function() {
+                shell.curse();
+            });
+        } else if (this.apologies.indexOf("[" + cmd + "]") >= 0) {
+            // Check for apologies.
+            var shell = this;
+            this.execute(function() {
+                shell.apology();
+            });
+        } else {
+            // It's just a bad command.
+            var shell = this;
+            this.execute(function() {
+                shell.invalidCommand();
+            });
+        }
     }
-    else
-    {
-        // It's not found, so check for curses and apologies before declaring the command invalid.
-        if (this.curses.indexOf("[" + rot13(cmd) + "]") >= 0)      // Check for curses.
-        {
-            this.execute(shellCurse);
-        }
-        else if (this.apologies.indexOf("[" + cmd + "]") >= 0)      // Check for apologies.
-        {
-            this.execute(shellApology);
-        }
-        else    // It's just a bad command.
-        {
-            this.execute(shellInvalidCommand);
-        }
-    }
-}
+};
 
-function shellParseInput(buffer)
-{
+/**
+ * Parses user requests
+ * 
+ * @param buffer
+ */
+Shell.prototype.parseInput = function(buffer) {
     var retVal = new UserCommand();
 
     // 1. Remove leading and trailing spaces.
@@ -547,94 +534,88 @@ function shellParseInput(buffer)
     // 2. Lower-case it.
     buffer = buffer.toLowerCase();
 
-    // 3. Separate on spaces so we can determine the command and command-line args, if any.
+    // 3. Separate on spaces so we can determine the command and command-line
+    // args, if any.
     var tempList = buffer.split(" ");
 
     // 4. Take the first (zeroth) element and use that as the command.
-    var cmd = tempList.shift();  // Yes, you can do that to an array in JavaScript.  See the Queue class.
+    var cmd = tempList.shift(); // Yes, you can do that to an array in
+    // JavaScript. See the Queue class.
     // 4.1 Remove any left-over spaces.
     cmd = trim(cmd);
     // 4.2 Record it in the return value.
     retVal.command = cmd;
 
     // 5. Now create the args array from what's left.
-    for (var i in tempList)
-    {
+    for ( var i in tempList) {
         var arg = trim(tempList[i]);
-        if (arg != "")
-        {
+        if (arg != "") {
             retVal.args[retVal.args.length] = tempList[i];
         }
     }
     return retVal;
-}
+};
 
-function shellExecute(fn, args)
-{
+/**
+ * Executes a user command
+ * 
+ * @param fn
+ * @param args
+ */
+Shell.prototype.execute = function(fn, args) {
     // We just got a command, so advance the line...
-    _StdIn.advanceLine();
+    this.stdOut.advanceLine();
     // ... call the command function passing in the args...
     fn(args);
     // Check to see if we need to advance the line again
-    if (_StdIn.CurrentXPosition > 0)
-    {
-        _StdIn.advanceLine();
+    if (this.stdOut.CurrentXPosition > 0) {
+        this.stdOut.advanceLine();
     }
     // ... and finally write the prompt again.
-    this.putPrompt();
-}
+    this.prompt();
+};
 
-//An "interior" or "private" class (prototype) used only inside Shell() (we hope).
+// Shell Command Functions. Again, not part of Shell() class per se', just
+// called from there.
+Shell.prototype.invalidCommand = function() {
 
-function ShellCommand()     
-{
+    this.stdOut.putText("Invalid Command. ");
+    if (_SarcasticMode) {
+        this.stdOut.putText("Duh. Go back to your Speak & Spell.");
+    } else {
+        this.stdOut.putText("Type 'help' for, well... help.");
+    }
+};
+
+Shell.prototype.curse = function() {
+    this.stdOut.putText("Oh, so that's how it's going to be, eh? Fine.");
+    this.stdOut.advanceLine();
+    this.stdOut.putText("Bitch.");
+    _SarcasticMode = true;
+};
+
+Shell.prototype.apology = function() {
+    if (_SarcasticMode) {
+        this.stdOut.putText("Okay. I forgive you. This time.");
+        _SarcasticMode = false;
+    } else {
+        this.stdOut.putText("For what?");
+    }
+};
+
+// An "interior" or "private" class (prototype) used only inside Shell() (we
+// hope).
+function ShellCommand() {
     // Properties
     this.command = "";
     this.description = "";
     this.action = "";
 }
 
-
-//Another "interior" or "private" class (prototype) used only inside Shell() (we hope).
-
-function UserCommand()
-{
+// Another "interior" or "private" class (prototype) used only inside Shell()
+// (we hope).
+function UserCommand() {
     // Properties
     this.command = "";
     this.args = [];
-}
-
-
-
-//Shell Command Functions.  Again, not part of Shell() class per se', just called from there.
-
-function shellInvalidCommand()
-{
-    _StdIn.putText("Invalid Command. ");
-    if (_SarcasticMode)
-    {
-        _StdIn.putText("Duh. Go back to your Speak & Spell.");
-    }
-    else
-    {
-        _StdIn.putText("Type 'help' for, well... help.");
-    }
-}
-
-function shellCurse()
-{
-    _StdIn.putText("Oh, so that's how it's going to be, eh? Fine.");
-    _StdIn.advanceLine();
-    _StdIn.putText("Bitch.");
-    _SarcasticMode = true;
-}
-
-function shellApology()
-{
-    if (_SarcasticMode) {
-        _StdIn.putText("Okay. I forgive you. This time.");
-        _SarcasticMode = false;
-    } else {
-        _StdIn.putText("For what?");
-    }
 }
