@@ -236,6 +236,73 @@ Host.prototype.clockPulse = function() {
     this.kernel.onCPUClockPulse();
 };
 
+Host.prototype.updateRQDisplay = function() {
+    var table = document.createElement("tbody");
+    var tr_sub_ids = [ "state", "pc", "acc", "xreg", "yreg", "zflag", "malloc",
+            "iostat" ];
+
+    // TODO Ask PCB for this function
+    // Returns an array of strings to populate in table data
+    var createDisplayStrings = function(pcb) {
+        var ret = [];
+        ret.push("State: " + pcb.state);
+        ret.push("CPU_PC: " + pcb.PC);
+        ret.push("CPU_Acc: " + pcb.Acc);
+        ret.push("CPU_Xreg: " + pcb.Xreg);
+        ret.push("CPU_Yreg: " + pcb.Yreg);
+        ret.push("CPU_Zflag: " + pcb.Zflag);
+        ret.push("Malloc'd: " + pcb.memLimit);
+        ret.push("I/O wait: " + pcb.IOWait);
+
+        return ret;
+    };
+    if (this.kernel.readyQueue.getSize() == 0) {
+        // if the readyqueue is empty
+        table.innerHTML = "<tr><td>No waiting processes</td></tr>";
+    } else {
+        // fill out the table with data
+        var tr;
+        var attr;
+        var td;
+        var pcb;
+
+        for ( var i = 0; i < this.kernel.readyQueue.getSize(); ++i) {
+            pcb = this.kernel.loadedProcesses[this.kernel.readyQueue.q[i]];
+            // Make a new table row
+            tr = document.createElement("tr");
+            // Set the name to == PID
+            tr.setAttribute("id", "pid" + pcb.PID);
+            // Set the name row
+            td = document.createElement("td");
+            td.setAttribute("id", "pname" + pcb.PID);
+            td.appendChild(document.createTextNode("Process " + pcb.PID));
+            tr.appendChild(td);
+
+            table.appendChild(tr);
+
+            // get attributes
+            attr = createDisplayStrings(pcb);
+
+            // Generate attribute rows
+            for ( var j = 0; j < attr.length; ++j) {
+                tr = document.createElement("tr");
+                // Generate a unique id
+                tr.setAttribute("id", "p" + tr_sub_ids[j] + pcb.PID);
+                // Set up data node
+                td = document.createElement("td");
+                // Set its data to display the attribute
+                td.appendChild(document.createTextNode(attr[j]));
+
+                tr.appendChild(td);
+                table.appendChild(tr);
+            }
+        }
+    }
+
+    document.getElementById("RQ").innerHTML = "";
+    document.getElementById("RQ").appendChild(table);
+};
+
 //
 // Keyboard Interrupt, a HARDWARE Interrupt Request. (See pages 560-561 in text
 // book.)

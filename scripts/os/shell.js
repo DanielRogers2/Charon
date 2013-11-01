@@ -324,7 +324,6 @@ function Shell(kernel) {
     sc.action = function(args) {
         var loaded = false;
         for ( var pid in shell.kernel.loadedProcesses) {
-            console.log(pid);
             shell.kernel.queueProgram(pid);
             loaded = true;
         }

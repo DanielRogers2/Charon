@@ -71,7 +71,6 @@ MMU.prototype.write = function(addr, byte, process) {
     }
 
     if (addr < pcb.memLimit) {
-        // TODO: Maybe add pages?
         // Write to address translated into process memory
         this.memory.write(this.translate(pcb, addr), byte);
     } else {

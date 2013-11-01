@@ -118,18 +118,30 @@
       </table>
    </div>
    
-   <div id="divMem" style="height:215px; margin-left:580px;">
-      <label>
-         System Memory
-      </label>
-         <br>
-         <div id="memScroll" style="height:190px; 
-         							width:375px; 
-         						    overflow:auto;"
-         >
-         <table id="memory" border="1"
-         ></table>
-         </div>
+   <div style="margin-left:580px">
+     <div id="divMem" style="height:215px; float:left;">
+        <label>
+           System Memory
+        </label>
+           <br>
+           <div id="memScroll" style="height:190px; 
+           							  width:375px; 
+           						      overflow:auto;">
+           <table id="memory" border="1"></table>
+           </div>
+     </div>
+     
+     <div id="divRQ" style="height:215px; margin-left:380px">
+       <label>
+           Ready Queue
+       </label>
+       <div id="RQScroll" style="height:190px;
+                                 width:150px;
+                                 overflow:auto;">
+       <table id="RQ" border="1"> <tr><td>No waiting processes</td></tr> </table>
+       </div>
+     </div>
+   
    </div>
 
    <div id="divConsole" style="margin:4px; width:500px; height:520px; float:left;">

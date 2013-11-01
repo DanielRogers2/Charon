@@ -190,6 +190,8 @@ function Kernel(host) {
 
             if (!kernel.CPU.isExecuting)
                 kernel.CPU.isExecuting = true;
+            
+            kernel.host.updateRQDisplay();
         }
     };
 
@@ -276,6 +278,7 @@ Kernel.prototype.queueProgram = function(pid) {
     } else {
         // Put the program in the ready queue
         this.readyQueue.enqueue(pid);
+        this.host.updateRQDisplay();
     }
 };
 
@@ -412,6 +415,7 @@ Kernel.prototype.freeProcess = function(pid) {
     if (rindex > -1) {
         // Remove it from the ready queue
         this.readyQueue.q.splice(rindex, 1);
+        this.host.updateRQDisplay();
     }
 
     if (this.activeProcess && (pid == this.activeProcess.PID)) {
