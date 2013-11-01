@@ -27,19 +27,19 @@ function Kernel(host) {
     this.TIMER_IRQ = 0;
     this.KEYBOARD_IRQ = 1;
     this.DISPLAY_IRQ = 2;
-    // handles SW system calls
-    this.SYS_IRQ = 3;
+    // handles SW system calls, ask CPU for value
+    this.SYS_IRQ = host.CPU.SYS_CALL_IRQ;
     // Software Fatal exception
-    // 0 = bad opcode
+    // 0 = bad opcode, from CPU
     // 1 = memory access violation
     // 2 = bad SYS call
-    this.SW_FATAL_IRQ = 4;
+    this.SW_FATAL_IRQ = host.CPU.SW_FATAL_IRQ;
     // program complete
-    this.PROG_EXIT = 5;
+    this.PROG_EXIT = host.CPU.PROG_EXIT_IRQ;
     // program step
     this.PROG_STEP = 6;
     // Handler for set CPU timers for scheduling & etc
-    this.CPU_TIMER_IRQ = 7;
+    this.CPU_TIMER_IRQ = host.CPU.TIMER_IRQ;
     // Handles context switches
     this.CTXT_SWITCH_IRQ = 8;
 
@@ -49,8 +49,9 @@ function Kernel(host) {
 
     // Set up our hardware connections
     this.CPU = host.CPU;
-    // Connect CPU interface
-    this.CPU.kernel = this;
+
+    // javascript needs to /die/
+    var kernel = this;
 
     // No processes yet
     this.nextPID = 0;
@@ -90,9 +91,6 @@ function Kernel(host) {
     // Polling is bad. We're god - democracy just makes things slower.
     // Dictatorship is our life blood
     this.IV = {};
-
-    // javascript needs to /die/
-    var kernel = this;
 
     // Load the timed events driver
     this.trace("Loading Timers");
@@ -190,10 +188,39 @@ function Kernel(host) {
 
             if (!kernel.CPU.isExecuting)
                 kernel.CPU.isExecuting = true;
-            
+
             kernel.host.updateRQDisplay();
         }
     };
+
+    this.trace("Connecting hardware interfaces");
+    // Interrupt handler for the CPU
+    var irq_handle = function(id, param) {
+        if (!param) {
+            kernel.queueInterrupt(id, []);
+        } else {
+            // The CPU passes in a single value, wrap it in an array
+            kernel.queueInterrupt(id, [ param ]);
+        }
+    };
+
+    // Memory read handler for the CPU
+    var read_handle = function(addr) {
+        return kernel.MMU.read(addr);
+    };
+
+    // Memory write handler for the CPU
+    var write_handle = function(addr, byte) {
+        kernel.MMU.write(addr, byte);
+    };
+
+    // Tracing function for the CPU
+    var tracer = function(msg) {
+        kernel.trace(msg);
+    };
+
+    // Connect CPU interface
+    this.CPU.hook(irq_handle, read_handle, write_handle, tracer);
 
     // Enable the OS Interrupts. (Not the CPU clock interrupt, as that is done
     // in the hardware sim.)

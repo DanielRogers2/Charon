@@ -28,12 +28,13 @@ function MMU(kernel) {
     }
 }
 
-/*
+/**
  * Reads a byte of data from the currently executing program's memory space
  * 
- * @param addr The address to read from (as a decimal value) This will be
- * wrapped to remain inside the program's memory space. @return The byte of data
- * at addr.
+ * @param addr
+ *            The address to read from (as a decimal value) This will be wrapped
+ *            to remain inside the program's memory space.
+ * @return The byte of data at addr.
  */
 MMU.prototype.read = function(addr) {
     // Get PCB
@@ -53,12 +54,14 @@ MMU.prototype.read = function(addr) {
     }
 };
 
-/*
+/**
  * Writes a byte of data to the currently executing program's mem space
  * 
- * @param addr The address to read to (as a decimal value) This will be wrapped
- * to remain inside the program's mem space @param byte The byte of data to
- * write (as a hex value)
+ * @param addr
+ *            The address to read to (as a decimal value) This will be wrapped
+ *            to remain inside the program's mem space
+ * @param byte
+ *            The byte of data to write (as a hex value)
  */
 MMU.prototype.write = function(addr, byte, process) {
     var pcb;

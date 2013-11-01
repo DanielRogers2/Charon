@@ -13,7 +13,7 @@
    Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
    ------------ */
 
-function CPU(host) {
+function CPU(display_fn) {
     this.PC = 0; // Program Counter
     this.Acc = 0; // Accumulator
     this.Xreg = 0; // X register
@@ -21,8 +21,26 @@ function CPU(host) {
     this.Zflag = 0; // Z-ero flag (Think of it as "isZero".)
     this.isExecuting = false;
 
-    this.kernel = undefined;
-    this.host = host;
+    // Kernel-supplied memory read-write handles
+    this.read = undefined;
+    this.write = undefined;
+    // Kernel-supplied interrupt generators
+    this.interrupt = undefined;
+    // Kernel-supplied tracing
+    this.trace = undefined;
+
+    // Host-supplied display-update function
+    this.display = display_fn;
+
+    // CPU defined interrupt requests
+    // Generates on program exit
+    this.PROG_EXIT_IRQ = 5;
+    // Generates on invalid instruction with argument 0
+    this.SW_FATAL_IRQ = 4;
+    // Generates on timer == 0
+    this.TIMER_IRQ = 7;
+    // Generates when instruction == FF
+    this.SYS_CALL_IRQ = 3;
     this.timer = 0;
 
     // CPU Instruction
@@ -41,7 +59,7 @@ function CPU(host) {
         // convert to decimal for read()
         addr = hexToDec(addr);
 
-        this.Acc = hexToDec(this.kernel.MMU.read(addr));
+        this.Acc = hexToDec(this.read(addr));
         this.PC_INC(3);
     };
 
@@ -50,7 +68,7 @@ function CPU(host) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.kernel.MMU.write(addr, decToHex(this.Acc));
+        this.write(addr, decToHex(this.Acc));
         this.PC_INC(3);
     };
 
@@ -59,7 +77,7 @@ function CPU(host) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Acc = this.Acc + hexToDec(this.kernel.MMU.read(addr));
+        this.Acc = this.Acc + hexToDec(this.read(addr));
         // wrap to the value of a single byte
         this.Acc %= 256;
 
@@ -77,7 +95,7 @@ function CPU(host) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Xreg = hexToDec(this.kernel.MMU.read(addr));
+        this.Xreg = hexToDec(this.read(addr));
 
         this.PC_INC(3);
     };
@@ -93,7 +111,7 @@ function CPU(host) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Yreg = hexToDec(this.kernel.MMU.read(addr));
+        this.Yreg = hexToDec(this.read(addr));
         this.PC_INC(3);
     };
 
@@ -105,7 +123,7 @@ function CPU(host) {
 
     // BRK -- BREAK: execution exit
     this['00'] = function(databits) {
-        this.kernel.queueInterrupt(this.kernel.PROG_EXIT, []);
+        this.interrupt(this.PROG_EXIT_IRQ);
     };
 
     // CPX -- compare Xreg to data in mem
@@ -113,7 +131,7 @@ function CPU(host) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Zflag = (this.Xreg === hexToDec(this.kernel.MMU.read(addr)));
+        this.Zflag = (this.Xreg === hexToDec(this.read(addr)));
         this.Zflag = (this.Zflag) ? 1 : 0;
 
         this.PC_INC(3);
@@ -135,26 +153,27 @@ function CPU(host) {
     this['EE'] = function(databits) {
         var addr = hexToDec(databits.join(''));
 
-        var nv = hexToDec(this.kernel.MMU.read(addr)) + 1;
+        var nv = hexToDec(this.read(addr)) + 1;
 
         // It's only a byte, so rollover if > 255
         nv = nv % 256;
 
-        this.kernel.MMU.write(addr, decToHex(nv));
+        this.write(addr, decToHex(nv));
 
         this.PC_INC(3);
     };
 
     // SYS -- system call
     this['FF'] = function(databits) {
-        this.kernel.queueInterrupt(this.kernel.SYS_IRQ, []);
+        this.interrupt(this.SYS_CALL_IRQ);
         this.PC_INC(1);
     };
 }
 
 CPU.prototype.cycle = function() {
-    this.kernel.trace("CPU cycle");
-    // TODO: Accumulate CPU usage and profiling statistics here.
+    if (this.trace)
+        this.trace("CPU cycle");
+    
     // Do the real work here. Be sure to set this.isExecuting appropriately.
     // Fetch
     var data = this.FETCH();
@@ -168,15 +187,17 @@ CPU.prototype.cycle = function() {
         this[op](databits);
     } else {
         // Invalid opcode
-        this.kernel.queueInterrupt(this.kernel.SW_FATAL_IRQ, [ 0 ]);
+        this.interrupt(this.SW_FATAL_IRQ, 0);
         this.isExecuting = false;
     }
-    this.host.updateCPUDisplay();
+    if (this.display)
+        this.display();
+
     --this.timer;
 
     if (this.timer <= 0) {
         // timer ended
-        this.kernel.queueInterrupt(this.kernel.CPU_TIMER_IRQ, []);
+        this.interrupt(this.TIMER_IRQ);
     }
 };
 
@@ -197,9 +218,29 @@ CPU.prototype.FETCH = function() {
     // Opcodes use a max of 3 bytes
     for ( var i = 0; i < 3; ++i) {
         // read in all bytes
-        data[i] = this.kernel.MMU.read(cbyte);
+        data[i] = this.read(cbyte);
         ++cbyte;
     }
 
     return data;
+};
+
+/**
+ * Hooks up a kernel to this CPU
+ * 
+ * @param interrupt_generator
+ *            A kernel function that will handle interrupt generation. The CPU
+ *            will supply the following interrupts:
+ * @param mem_read
+ *            A function that allows memory access/reading
+ * @param mem_write
+ *            A function that allows memory writing
+ * @param tracer
+ *            A function that prints tracing information, because CPUs do that?
+ */
+CPU.prototype.hook = function(interrupt_generator, mem_read, mem_write, tracer) {
+    this.read = mem_read;
+    this.write = mem_write;
+    this.interrupt = interrupt_generator;
+    this.trace = tracer;
 };

@@ -35,7 +35,13 @@ function Host() {
             .getContext('2d');
 
     // ... Create and initialize the CPU ...
-    this.CPU = new CPU(this);
+    var host = this;
+    // CPU Display update function
+    var cpu_displayer = function() {
+        host.updateCPUDisplay();
+    };
+    this.CPU = new CPU(cpu_displayer);
+
     // Create memory
     this.memory = new Memory(this);
     this.kernel = undefined;
