@@ -112,13 +112,15 @@ function CPU(host) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Zflag = (this.Xreg == hexToDec(this.kernel.MMU.read(addr)));
+        this.Zflag = (this.Xreg === hexToDec(this.kernel.MMU.read(addr)));
+        this.Zflag = (this.Zflag) ? 1 : 0;
+        
         this.PC_INC(3);
     };
 
-    // BNE -- branch if Zflag == 0
+    // BNE -- branch if Zflag === 0
     this['D0'] = function(databits) {
-        if (this.Zflag == 0) {
+        if (this.Zflag === 0) {
             var jmpBytes = hexToDec(databits[1]);
 
             this.PC_INC(jmpBytes + 2);

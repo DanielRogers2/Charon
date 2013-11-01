@@ -61,7 +61,7 @@ function hexToDec(hexval) {
 
     if (hexval.length > 2) {
         // strip 0x
-        if (hexval.slice(0, 2) == "0x") {
+        if (hexval.slice(0, 2) === "0x") {
             hexval = hexval.slice(2);
         }
     }

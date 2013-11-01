@@ -44,7 +44,7 @@ Clock.prototype.getDateString = function(date) {
     var end = this.endings[day % 10];
 
     // 11 - 13 use 'th' rather than 11st
-    if (Math.floor(day / 10) == 1) {
+    if (Math.floor(day / 10) === 1) {
         end = 'th';
     }
 

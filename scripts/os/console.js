@@ -73,10 +73,10 @@ CLIconsole.prototype.handleInput = function() {
         var chr = this.kernel.inputQ.dequeue();
         // Check to see if it's "special" (enter or ctrl-c)
         // or "normal" (anything else that the keyboard device driver gave us).
-        if (chr == String.fromCharCode(13)) // Enter key
+        if (chr === String.fromCharCode(13)) // Enter key
         {
             // update recent command list
-            if (this.commandBuffer.index == this.commandBuffer.maxLen) {
+            if (this.commandBuffer.index === this.commandBuffer.maxLen) {
                 // wrap around
                 this.commandBuffer.index = 0;
             }
@@ -97,7 +97,7 @@ CLIconsole.prototype.handleInput = function() {
             this.buffer = "";
         }
 
-        else if (chr == 38 || chr == 40) // up/down arrow keys
+        else if (chr === 38 || chr === 40) // up/down arrow keys
         {
             if (this.commandBuffer.list.length > 0) {
                 // clear current display
@@ -160,9 +160,9 @@ CLIconsole.prototype.handleInput = function() {
 
                 // replace buffer with old command
                 // up arrow
-                if (chr == 38) {
+                if (chr === 38) {
                     // index always points to next location to put item in
-                    if (this.commandBuffer.index == 0) {
+                    if (this.commandBuffer.index === 0) {
                         // adjust for first item, use length not MaxLen
                         this.commandBuffer.index = this.commandBuffer.list.length;
                     }
@@ -171,7 +171,7 @@ CLIconsole.prototype.handleInput = function() {
                 }
                 // down arrow
                 else {
-                    if (this.commandBuffer.index == this.commandBuffer.list.length) {
+                    if (this.commandBuffer.index === this.commandBuffer.list.length) {
                         // adjust for last item
                         this.commandBuffer.index = 0;
                     }
@@ -185,7 +185,7 @@ CLIconsole.prototype.handleInput = function() {
 
         }
 
-        else if (chr == String.fromCharCode(8)) // backspace
+        else if (chr === String.fromCharCode(8)) // backspace
         {
             if (this.buffer.length > 0) { // stuff to delete
                 // get last character

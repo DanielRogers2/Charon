@@ -57,7 +57,7 @@ StatusBar.prototype.updateTime = function(date) {
         this.drawingContext.fillText(nd + " @ " + nt, this.timeBoxStart,
                 this.YPosition);
 
-        if (this.currentLine == this.status.length) {
+        if (this.currentLine === this.status.length) {
             this.currentLine = 0;
         }
 

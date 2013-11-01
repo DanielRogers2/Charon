@@ -124,7 +124,7 @@ DeviceDriverKeyboard.prototype.isr = function(params) {
         }
 
         chr = String.fromCharCode(keyCode);
-    } else if ((keyCode == 32) || (keyCode == 13) || (keyCode == 8)) {
+    } else if ((keyCode === 32) || (keyCode === 13) || (keyCode === 8)) {
         // space, enter, or backspace
         chr = String.fromCharCode(keyCode);
     } else if ((keyCode >= 186) && (keyCode <= 222)) {
@@ -145,16 +145,16 @@ DeviceDriverKeyboard.prototype.isr = function(params) {
         }
 
         chr = String.fromCharCode(keyCode);
-    } else if ((keyCode == 38 || keyCode == 40)) {
+    } else if ((keyCode === 38 || keyCode === 40)) {
         // arrow keys
         // no ASCII values for this, and the keyCodes would correspond to &
         // and )
         // use the raw code
         chr = keyCode;
-    } else if ((keyCode == 20)) {
+    } else if ((keyCode === 20)) {
         // caps lock
         this.capsToggle = !this.capsToggle;
-    } else if ((keyCode == 16)) {
+    } else if ((keyCode === 16)) {
         // shift
         // do nothing
     } else {

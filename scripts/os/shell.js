@@ -26,7 +26,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "ver";
     sc.description = "- Displays the current version data.";
-    sc.action = function shellVer() {
+    sc.action = function() {
         shell.stdOut.putText(APP_NAME + " version " + APP_VERSION);
     };
     this.commandList[this.commandList.length] = sc;
@@ -37,7 +37,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "help";
     sc.description = "- This is the help command. Seek help.";
-    sc.action = function shellHelp() {
+    sc.action = function() {
         shell.stdOut.putText("Commands:");
         for ( var i in shell.commandList) {
             shell.stdOut.advanceLine();
@@ -53,7 +53,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "shutdown";
     sc.description = "- Shuts down the virtual OS but leaves the underlying hardware simulation running.";
-    sc.action = function shellShutdown() {
+    sc.action = function() {
         shell.stdOut.putText("Shutting down...");
         // Call Kernel shutdown routine.
         shell.kernel.Shutdown();
@@ -68,7 +68,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "cls";
     sc.description = "- Clears the screen and resets the cursor position.";
-    sc.action = function shellCls() {
+    sc.action = function() {
         shell.stdOut.clearScreen();
         shell.stdOut.resetXY();
     };
@@ -80,7 +80,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "man";
     sc.description = "<topic> - Displays the MANual page for <topic>.";
-    sc.action = function shellMan(args) {
+    sc.action = function(args) {
         if (args.length > 0) {
             var topic = args[0];
             switch (topic) {
@@ -103,7 +103,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "trace";
     sc.description = "<on | off> - Turns the OS trace on or off.";
-    sc.action = function shellTrace(args) {
+    sc.action = function(args) {
         if (args.length > 0) {
             var setting = args[0];
             switch (setting) {
@@ -136,7 +136,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "rot13";
     sc.description = "<string> - Does rot13 obfuscation on <string>.";
-    sc.action = function shellRot13(args) {
+    sc.action = function(args) {
         if (args.length > 0) {
             shell.stdOut.putText(args[0] + " = '" + rot13(args[0]) + "'"); // Requires
             // Utils.js
@@ -156,7 +156,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "prompt";
     sc.description = "<string> - Sets the prompt.";
-    sc.action = function shellPrompt(args) {
+    sc.action = function(args) {
         if (args.length > 0) {
             shell.promptStr = args[0];
         } else {
@@ -172,7 +172,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "date";
     sc.description = " - Displays the current date";
-    sc.action = function shellDate() {
+    sc.action = function() {
         var date = new Date();
         var clock = new Clock();
 
@@ -192,7 +192,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "whereami";
     sc.description = " - Shows the current location of the system";
-    sc.action = function shellLocation() {
+    sc.action = function() {
         // yuca mountain
         shell.stdOut.putText("36 degrees 56' 25\" N, 116 degrees 29' 06\" W");
     };
@@ -235,14 +235,11 @@ function Shell(kernel) {
         // check if multiple of 2 values (full byes)
         invalid &= ((rawProg % 2) != 0);
         // Maximum size of 256 for now
-        invalid &= (rawProg.length > 256);
+        invalid &= (rawProg.length > (shell.kernel.MMU.PROGRAM_ALLOWED_MEM * 2));
 
         var valid = valExp.test(rawProg);
 
         if (!invalid && valid) {
-            shell.stdOut.putText("Loaded Program");
-            shell.stdOut.advanceLine();
-
             // split into dual-hex blocks
             var progBytes = [];
             for ( var i = 0; i < rawProg.length; i += 2) {
@@ -252,15 +249,27 @@ function Shell(kernel) {
             // Create process control block
             var pcb = new PCB(shell.kernel);
 
-            var pid = shell.kernel.loadedProcesses.length;
-            // TODO: Handle loading processes that are out of memory
-            var memstart = pid * 256;
+            // Update the memory used by the PCB
+            var success = shell.kernel.MMU.allocateMem(pcb,
+                    shell.kernel.MMU.PROGRAM_ALLOWED_MEM);
+            if (!success) {
+                // Couldn't allocate memory
+                shell.stdOut.putText("Not enough memory");
+                return;
+            }
 
-            pcb.init(pid, memstart);
+            shell.stdOut.putText("Loaded Program");
+            shell.stdOut.advanceLine();
 
+            var pid = shell.kernel.newPID();
+
+            pcb.init(pid);
+
+            if (DEBUG) {
+                console.log(pcb);
+            }
             for ( var i = 0; i < progBytes.length; ++i) {
-                // TODO: Check program size during load to prevent overflow
-                shell.kernel.memory.write(i + memstart, progBytes[i]);
+                shell.kernel.MMU.write(i, progBytes[i], pcb);
             }
 
             shell.kernel.loadedProcesses[pid] = pcb;
@@ -353,7 +362,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "countdown";
     sc.description = " - ????";
-    sc.action = function secret() {
+    sc.action = function() {
         // it's cooler if it scrolls slowly
         clearInterval(shell.kernel.host.hardwareClockID);
         shell.kernel.host.hardwareClockID = setInterval(function() {

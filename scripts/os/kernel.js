@@ -45,9 +45,12 @@ function Kernel(host) {
 
     // Set up our hardware connections
     this.CPU = host.CPU;
-    //Connect CPU interface
+    // Connect CPU interface
     this.CPU.kernel = this;
-    
+
+    // No processes yet
+    this.nextPID = 0;
+
     this.memory = host.memory;
     this.host = host;
 
@@ -63,7 +66,7 @@ function Kernel(host) {
 
     // Queue for timed events, part of the 'TEQ' that sets this apart
     var TimedComparator = function(a, b) {
-        return (a.timeLeft == b.timeLeft) ? 0 : (a.timeLeft < b.timeLeft) ? -1
+        return (a.timeLeft === b.timeLeft) ? 0 : (a.timeLeft < b.timeLeft) ? -1
                 : 1;
     };
     this.TEQ = new MinHeap(null, TimedComparator);
@@ -84,9 +87,9 @@ function Kernel(host) {
     // Dictatorship is our life blood
     this.IV = {};
 
-    //javascript needs to /die/
+    // javascript needs to /die/
     var kernel = this;
-    
+
     // Load the timed events driver
     this.trace("Loading Timers");
     // Kernel built-in routine for timers (not the clock)
@@ -111,7 +114,7 @@ function Kernel(host) {
     this.trace("Loading the display driver");
     this.displayDriver = new DeviceDriverDisplay(this);
     this.displayDriver.driverEntry();
-    
+
     this.trace(this.displayDriver.status);
     this.IV[this.DISPLAY_IRQ] = function(params) {
         kernel.displayDriver.isr(params);
@@ -163,8 +166,8 @@ function Kernel(host) {
         // Give GLaDOS access
         _KernelInputQueue = this.inputQ;
         krnInterruptHandler = this.interruptHandler;
-        
-        //Let her play
+
+        // Let her play
         _GLaDOS.afterStartup();
     }
 }
@@ -318,12 +321,11 @@ Kernel.prototype.programCleanup = function() {
         document.getElementById('btnStep').disabled = true;
     }
 
-    //Clean up CPU data
-    this.CPU.PC = 0; // Program Counter
-    this.CPU.Acc = 0; // Accumulator
-    this.CPU.Xreg = 0; // X register
-    this.CPU.Yreg = 0; // Y register
-    this.CPU.Zflag = 0;
+    // Remove the process from the resident queue
+    delete this.loadedProcesses[this.activeProcess.PID];
+    this.MMU.freeMem(this.activeProcess, this.activeProcess.memLimit);
+
+    this.activeProcess = undefined;
     this.CPU.isExecuting = false;
 };
 
@@ -452,7 +454,7 @@ Kernel.prototype.timerISR = function(params) {
 
     // Kernel can do more important things in the future, for now just execute
     // timer events
-    if (params.length == 2) {
+    if (params.length === 2) {
         if (DEBUG) {
             console.log("executing timed: " + params);
         }
@@ -460,6 +462,15 @@ Kernel.prototype.timerISR = function(params) {
         // Execute the delayed function
         params[1].call(params[0], new Date());
     }
+};
+
+/**
+ * Get the next Process id
+ * 
+ * @returns {Number}
+ */
+Kernel.prototype.newPID = function() {
+    return this.nextPID++;
 };
 
 // System Calls... that generate software interrupts via tha Application
@@ -485,7 +496,9 @@ Kernel.prototype.programStep = function() {
 };
 
 // OS Utility Routines
-
+/**
+ * diag info
+ */
 Kernel.prototype.trace = function(msg) {
     // Check globals to see if trace is set ON. If so, then (maybe) log the
     // message.
@@ -493,7 +506,8 @@ Kernel.prototype.trace = function(msg) {
         if (msg === "Idle") {
             // We can't log every idle clock pulse because it would lag the
             // browser very quickly.
-            if (this.host.clock % (1000 / CPU_CLOCK_INTERVAL) == 0) // Check the
+            if (this.host.clock % (1000 / CPU_CLOCK_INTERVAL) === 0) // Check
+                                                                        // the
             // CPU_CLOCK_INTERVAL
             // in globals.js
             // for an
@@ -507,6 +521,9 @@ Kernel.prototype.trace = function(msg) {
     }
 };
 
+/**
+ * Blue screen of death, very bad
+ */
 Kernel.prototype.trapError = function(msg) {
     this.host.log("OS ERROR - TRAP: " + msg);
     var kernel = this;
@@ -527,7 +544,7 @@ Kernel.prototype.trapError = function(msg) {
 
     };
 
-    if (msg == "BSOD") {
+    if (msg === "BSOD") {
         var crashImg = new Image();
 
         crashImg.onload = function() {

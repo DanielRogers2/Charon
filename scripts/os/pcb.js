@@ -16,18 +16,18 @@ function PCB(kernel) {
     this.Zflag = 0; // Z-ero flag (Think of it as "isZero".)
 
     this.kernel = kernel;
-    this.memStart = 0; // base address
-    this.memLimit = this.kernel.MMU.PROGRAM_ALLOWED_MEM; // maximum memory
-    // allowed
+    this.memLimit = 0; //Can't put any memory in because no memory allocated
     this.PID = 0;
     this.IOWait = false; // not waiting for I/O
+    
+    //No allocated pages yet
+    this.pageList = [];
 }
 
 /*
  * Set up program prior to execution
  */
-PCB.prototype.init = function(pid, basemem) {
-    this.memStart = basemem; // where the process is loading into
+PCB.prototype.init = function(pid) {
     this.PID = pid;
     this.kernel.MMU.zeroMem(this);
     this.state = 'ready'; // Program is ready once loaded
@@ -95,7 +95,7 @@ PCB.prototype.display = function(output) {
     output.putText("       state: " + this.state);
     output.advanceLine();
 
-    output.putText("    baseaddr: " + this.memStart);
+    output.putText("    pages: " + this.pageList);
     output.advanceLine();
 
     output.putText("  Mem allocd: " + this.memLimit);
