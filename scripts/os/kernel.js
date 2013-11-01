@@ -38,6 +38,10 @@ function Kernel(host) {
     this.PROG_EXIT = 5;
     // program step
     this.PROG_STEP = 6;
+    // Handler for set CPU timers for scheduling & etc
+    this.CPU_TIMER_IRQ = 7;
+    // Handles context switches
+    this.CTXT_SWITCH_IRQ = 8;
 
     // Canvases for drawing
     this.CONSOLE_CID = 0;
@@ -149,8 +153,45 @@ function Kernel(host) {
     // Do something for somehow where?
     this.buffers = new Array();
 
-    // Processes loaded into memory (NOT THE READY QUEUE)
-    this.loadedProcesses = [];
+    // Processes loaded into memory -- the resident queue
+    this.loadedProcesses = {};
+    // The ready queue
+    this.readyQueue = new Queue();
+    // Set up a new short-term scheduler
+    this.shortTermSched = new STS(this);
+
+    this.trace("Setting up the short term scheduler");
+    this.IV[this.CPU_TIMER_IRQ] = function(params) {
+        kernel.trace("Scheduling decision");
+        // Need to make a scheduling decision
+        kernel.shortTermSched.decide();
+    };
+
+    this.trace("Setting up context switch handling");
+    this.IV[this.CTXT_SWITCH_IRQ] = function(params) {
+        // Params == pcb to load
+        // Sanity check
+        if (params[0] in kernel.loadedProcesses) {
+            if (kernel.activeProcess) {
+                // Save the active process
+                kernel.activeProcess.synchronize();
+                // Update its state
+                kernel.activeProcess.state = 'ready';
+                // Move it onto the back of the ready queue
+                kernel.readyQueue.enqueue(kernel.activeProcess.PID);
+            }
+
+            // Load the new registers
+            var proc = kernel.loadedProcesses[params[0]];
+            proc.load();
+            // Update the active process
+            kernel.activeProcess = proc;
+            kernel.activeProcess.state = 'running';
+
+            if (!kernel.CPU.isExecuting)
+                kernel.CPU.isExecuting = true;
+        }
+    };
 
     // Enable the OS Interrupts. (Not the CPU clock interrupt, as that is done
     // in the hardware sim.)
@@ -209,6 +250,33 @@ Kernel.prototype.printStr = function(addr) {
  */
 Kernel.prototype.queueInterrupt = function(ID, data) {
     this.IQ.enqueue(new Interrupt(ID, data));
+};
+
+/**
+ * Queues a program for execution
+ */
+Kernel.prototype.queueProgram = function(pid) {
+
+    if (this.readyQueue.q.indexOf(pid) > -1) {
+        // Don't add twice in a row the same PID
+        this.trace("Attempted double PID add");
+        return;
+    }
+
+    // Get the process and update its status
+    var process = this.loadedProcesses[pid];
+    process.state = 'ready';
+
+    if (!this.activeProcess) {
+        // Set up the switch immediately if no programs loaded
+        this.activeProcess = process;
+        process.load();
+        process.state = 'running';
+        this.CPU.isExecuting = 'true';
+    } else {
+        // Put the program in the ready queue
+        this.readyQueue.enqueue(pid);
+    }
 };
 
 /**
@@ -295,8 +363,10 @@ Kernel.prototype.swExceptionHandler = function(params) {
     this.stdOut.advanceLine();
     this.shell.prompt();
 
+    // Kill it
     this.activeProcess.state = 'failed';
-    this.CPU.isExecuting = false;
+
+    this.freeProcess(this.activeProcess.PID);
 };
 
 /**
@@ -304,7 +374,6 @@ Kernel.prototype.swExceptionHandler = function(params) {
  * at program exit.
  */
 Kernel.prototype.programCleanup = function() {
-    // TODO: Add scheduler stuff
     this.stdOut.advanceLine();
     this.stdOut.putText("Program: " + this.activeProcess.PID + " - Complete");
     this.stdOut.advanceLine();
@@ -321,12 +390,37 @@ Kernel.prototype.programCleanup = function() {
         document.getElementById('btnStep').disabled = true;
     }
 
-    // Remove the process from the resident queue
-    delete this.loadedProcesses[this.activeProcess.PID];
-    this.MMU.freeMem(this.activeProcess, this.activeProcess.memLimit);
+    this.freeProcess(this.activeProcess.PID);
+};
 
-    this.activeProcess = undefined;
-    this.CPU.isExecuting = false;
+/**
+ * Frees the resources used by the active process
+ */
+Kernel.prototype.freeProcess = function(pid) {
+    if (!(pid in this.loadedProcesses)) {
+        this.trace("bad PID free");
+        return;
+    }
+    // Release the program's memory
+    this.MMU.freeMem(this.loadedProcesses[pid],
+            this.loadedProcesses[pid].memLimit);
+
+    // Remove the process from the resident queue
+    delete this.loadedProcesses[pid];
+
+    var rindex = this.readyQueue.q.indexOf(pid);
+    if (rindex > -1) {
+        // Remove it from the ready queue
+        this.readyQueue.q.splice(rindex, 1);
+    }
+
+    if (this.activeProcess && (pid == this.activeProcess.PID)) {
+        // No active process now
+        this.activeProcess = undefined;
+        // Can't execute a program if there is nothing to execute
+        this.CPU.isExecuting = false;
+        this.shortTermSched.decide();
+    }
 };
 
 /**
@@ -382,7 +476,6 @@ Kernel.prototype.onCPUClockPulse = function() {
         // If there are no interrupts then run one CPU cycle if there is
         // anything being processed.
         this.CPU.cycle();
-
     } else {
         // If there are no interrupts and there is nothing being executed then
         // just be idle.
@@ -507,7 +600,7 @@ Kernel.prototype.trace = function(msg) {
             // We can't log every idle clock pulse because it would lag the
             // browser very quickly.
             if (this.host.clock % (1000 / CPU_CLOCK_INTERVAL) === 0) // Check
-                                                                        // the
+            // the
             // CPU_CLOCK_INTERVAL
             // in globals.js
             // for an
@@ -548,9 +641,9 @@ Kernel.prototype.trapError = function(msg) {
         var crashImg = new Image();
 
         crashImg.onload = function() {
-            this.host.contexts[this.CONSOLE_CID].drawImage(crashImg, 0, 0,
-                    this.host.screens[this.CONSOLE_CID].width,
-                    this.host.screens[this.CONSOLE_CID].height);
+            kernel.host.contexts[kernel.CONSOLE_CID].drawImage(crashImg, 0, 0,
+                    kernel.host.screens[kernel.CONSOLE_CID].width,
+                    kernel.host.screens[kernel.CONSOLE_CID].height);
 
             var str = "Your system's dead, there's something wrong";
 

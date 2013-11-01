@@ -23,6 +23,7 @@ function CPU(host) {
 
     this.kernel = undefined;
     this.host = host;
+    this.timer = 0;
 
     // CPU Instruction
     // Databits argument is the rest of the bits following the opcode
@@ -114,7 +115,7 @@ function CPU(host) {
 
         this.Zflag = (this.Xreg === hexToDec(this.kernel.MMU.read(addr)));
         this.Zflag = (this.Zflag) ? 1 : 0;
-        
+
         this.PC_INC(3);
     };
 
@@ -166,10 +167,17 @@ CPU.prototype.cycle = function() {
         // Execute instruction
         this[op](databits);
     } else {
+        // Invalid opcode
         this.kernel.queueInterrupt(this.kernel.SW_FATAL_IRQ, [ 0 ]);
         this.isExecuting = false;
     }
     this.host.updateCPUDisplay();
+    --this.timer;
+
+    if (this.timer <= 0) {
+        // timer ended
+        this.kernel.queueInterrupt(this.kernel.CPU_TIMER_IRQ, []);
+    }
 };
 
 // Increment the program counter by the correct number of bytes

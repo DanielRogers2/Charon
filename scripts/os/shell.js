@@ -273,7 +273,6 @@ function Shell(kernel) {
             }
 
             shell.kernel.loadedProcesses[pid] = pcb;
-
             shell.stdOut.putText("PID: " + pid);
         } else {
             shell.stdOut.putText("Invalid Program!");
@@ -287,28 +286,71 @@ function Shell(kernel) {
      */
     sc = new ShellCommand();
     sc.command = 'run';
-    sc.description = ' <pid> - run a loaded program with <pid>';
+    sc.description = ' <pid> [pids...] - run loaded programs with <pid> or [pids]';
     sc.action = function(args) {
         if (args.length > 0) {
-            if (args[0] in shell.kernel.loadedProcesses) {
-                // Have an actual process we can execute
-                // TODO: Put on ready queue and then execute for scheduling
-                shell.kernel.activeProcess = shell.kernel.loadedProcesses[args[0]];
+            // Does the actual work to load a process or print debug info
+            var ld = function(pid) {
+                if (pid in shell.kernel.loadedProcesses) {
+                    // Valid process to execute
+                    shell.kernel.queueProgram(pid);
+                } else {
+                    shell.stdOut.putText("No such program");
+                }
+            };
 
-                // Clear junk data if needed
-                shell.kernel.activeProcess.zeroRegisters();
-
-                shell.kernel.activeProcess.load();
-                shell.kernel.activeProcess.state = "running";
-
-                shell.kernel.CPU.isExecuting = true;
+            // \javascript\...
+            if (args.length > 1) {
+                for ( var pid in args) {
+                    ld(pid);
+                }
             } else {
-                shell.stdOut.putText("No such process");
+                // \JAVASCRIPT\
+                var pid = parseInt(args[0]);
+                ld(pid);
             }
         } else {
             shell.stdOut.putText("Please supply a PID");
         }
+    };
+    this.commandList[this.commandList.length] = sc;
 
+    /*
+     * Run all loaded programs
+     */
+    sc = new ShellCommand();
+    sc.command = 'runall';
+    sc.description = ' - executes all loaded programs';
+    sc.action = function(args) {
+        var loaded = false;
+        for ( var pid in shell.kernel.loadedProcesses) {
+            console.log(pid);
+            shell.kernel.queueProgram(pid);
+            loaded = true;
+        }
+
+        if (!loaded) {
+            shell.stdOut.putText("No loaded processes");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Updates the round robin quantum
+     */
+    sc = new ShellCommand();
+    sc.command = 'quantum';
+    sc.description = ' - sets the number of CPU cycles for RR scheduling (default == 6)';
+    sc.action = function(args) {
+        if (args[0] === 'default') {
+            shell.kernel.shortTermSched.quantum = shell.kernel.shortTermSched.DEFAULT_QUANTUM;
+            shell.stdOut.putText("Reset quantum to default");
+        } else if (args[0] > 0) {
+            shell.kernel.shortTermSched.quantum = parseInt(args[0]);
+            shell.stdOut.putText("Set quantum to: " + args[0]);
+        } else {
+            shell.stdOut.putText("Invalid quantum");
+        }
     };
     this.commandList[this.commandList.length] = sc;
 
@@ -335,12 +377,90 @@ function Shell(kernel) {
                 shell.kernel.activeProcess.state = "running";
 
                 shell.stdOut.putText("Program Ready, hit Step button to step");
-                shell.stdOut.advanceLine();
             } else {
                 shell.stdOut.putText("No such process");
             }
         } else {
             shell.stdOut.putText("Please supply a PID");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Display active process IDs
+     */
+    sc = new ShellCommand();
+    sc.command = 'ps';
+    sc.description = ' - display active process ids, specify -l for loaded';
+    sc.action = function(args) {
+        if (args[0] === "-l") {
+            var printed = false;
+            shell.stdOut.putText("Loaded processes: ");
+            for ( var pid in shell.kernel.loadedProcesses) {
+                shell.stdOut.putText(pid + " ");
+                printed = true;
+            }
+
+            // We didn't display a process
+            if (!printed) {
+                shell.stdOut.putText("None");
+            }
+
+        } else if (shell.kernel.activeProcess) {
+            shell.stdOut.putText("Active PIDs: ");
+            shell.stdOut.putText(shell.kernel.activeProcess.PID + " ");
+
+            for ( var i = 0; i < shell.kernel.readyQueue.getSize(); ++i) {
+                shell.stdOut.putText(shell.kernel.readyQueue.q[i] + " ");
+            }
+        } else {
+            shell.stdOut.putText("No active processes");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Kill an active process
+     */
+    sc = new ShellCommand();
+    sc.command = 'kill';
+    sc.description = ' <pid> - kills an active process with pid <pid>';
+    sc.action = function(args) {
+        if (args.length > 0 && args[0] in shell.kernel.loadedProcesses) {
+            // See if it's running or queued
+            var pid = parseInt(args[0]);
+            if ((shell.kernel.activeProcess && shell.kernel.activeProcess.PID == pid)
+                    || shell.kernel.readyQueue.q.indexOf(pid) > -1) {
+                shell.kernel.freeProcess(pid);
+                shell.stdOut.putText("Killed PID: " + pid);
+            } else {
+                shell.stdOut
+                        .putText("Use unload to remove loaded, but non-active, processes");
+            }
+        } else {
+            shell.stdOut.putText("Please supply a valid PID");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Remove a loaded process
+     */
+    sc = new ShellCommand();
+    sc.command = 'unload';
+    sc.description = ' <pid> - removes an inactive process';
+    sc.action = function(args) {
+        if (args.length > 0 && args[0] in shell.kernel.loadedProcesses) {
+            // See if it's running or queued
+            if (!(shell.kernel.activeProcess && shell.kernel.activeProcess.PID == args[0])
+                    && shell.kernel.readyQueue.q.indexOf(args[0]) == -1) {
+                shell.kernel.freeProcess(args[0]);
+                shell.stdOut.putText("Unloaded PID: " + args[0]);
+            } else {
+                shell.stdOut.putText("Use kill to remove active processes");
+            }
+        } else {
+            shell.stdOut.putText("Please supply a valid PID");
         }
     };
     this.commandList[this.commandList.length] = sc;
@@ -489,9 +609,8 @@ Shell.prototype.handleInput = function(buffer) {
     // Determine the command and execute it.
     //
     // JavaScript may not support associative arrays in all browsers so we have
-    // to
-    // iterate over the command list in attempt to find a match. TODO: Is there
-    // a better way? Probably.
+    // to iterate over the command list in attempt to find a match. TODO: Is
+    // there a better way? Probably.
     var index = 0;
     var found = false;
     while (!found && index < this.commandList.length) {

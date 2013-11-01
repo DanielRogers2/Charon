@@ -135,7 +135,7 @@ MMU.prototype.allocateMem = function(pcb, bytes) {
  * Frees memory used by a PCB
  */
 MMU.prototype.freeMem = function(pcb, bytes) {
-    
+
     var freed = 0;
     while (freed + this.PAGE_SIZE <= bytes) {
         this.freePages.push(pcb.pageList.pop());

@@ -13,7 +13,7 @@ var APP_NAME = "Charon"; // ferryman of the dead, appropriate for an OS
 // written in JS
 var APP_VERSION = "0.11";
 
-var CPU_CLOCK_INTERVAL = 10; // This is in ms, or milliseconds, so 1000 = 1
+var CPU_CLOCK_INTERVAL = 100; // This is in ms, or milliseconds, so 1000 = 1
 // second.
 
 // turn on/off console DEBUG
@@ -28,7 +28,7 @@ var _FontHeightMargin = 4; // Additional space added to font size when
 // Default the OS trace to be on.
 var _Trace = true;
 
-//GLaDOS still looks at these
+// GLaDOS still looks at these
 var _KernelInputQueue = null;
 var krnInterruptHandler = null;
 
