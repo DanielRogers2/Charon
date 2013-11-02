@@ -22,8 +22,7 @@ function Kernel(host) {
     // Pages 23 (timer), 9 (interrupts), and 561 (interrupt
     // priority).
     // NOTE: The timer is different from hardware/host clock pulses. Don't
-    // confuse
-    // these.
+    // confuse these.
     this.TIMER_IRQ = 0;
     this.KEYBOARD_IRQ = 1;
     this.DISPLAY_IRQ = 2;
@@ -70,11 +69,7 @@ function Kernel(host) {
     this.IQ = new Queue();
 
     // Queue for timed events, part of the 'TEQ' that sets this apart
-    var TimedComparator = function(a, b) {
-        return (a.timeLeft === b.timeLeft) ? 0 : (a.timeLeft < b.timeLeft) ? -1
-                : 1;
-    };
-    this.TEQ = new MinHeap(null, TimedComparator);
+    this.TEQ = new MinHeap(null);
 
     // Padding to protect our insides from caveman clubs
     this.inputQ = new Queue();
@@ -185,10 +180,11 @@ function Kernel(host) {
     var cpu_t_updater = function(ticks) {
         kernel.CPU.timer = ticks;
     };
-    
+
     this.shortTermSched = new STS(this.readyQueue, ctxt_switcher,
             cpu_t_updater, tracer);
 
+    // Handles the CPU interrupt and executes scheduling decisions
     this.IV[this.CPU_TIMER_IRQ] = function(params) {
         kernel.trace("Scheduling decision");
         // Need to make a scheduling decision
