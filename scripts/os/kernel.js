@@ -146,7 +146,21 @@ function Kernel(host) {
 
     // Loads the memory management unit
     this.trace("Loading MMU");
-    this.MMU = new MMU(this);
+    // Function to handle memory access violations
+    var mem_acc_viol_handlr = function(pid) {
+        // Queue a fatal interrupt, indicate that it was fatal
+        kernel.queueInterrupt(kernel.SW_FATAL_IRQ, [ 1, pid ]);
+    };
+    // Function to get process control blocks for the MMU
+    var pcb_lookp = function(pid) {
+        if (pid === undefined) {
+            return kernel.activeProcess;
+        } else {
+            return kernel.loadedProcesses[pid];
+        }
+    };
+
+    this.MMU = new MMU(mem_acc_viol_handlr, pcb_lookp, this.memory);
 
     // Do something for somehow where?
     this.buffers = new Array();
@@ -361,14 +375,25 @@ Kernel.prototype.sysCallHandler = function() {
  * 
  * @param params
  *            The parameters identifying the type of exception 0 == bad opcode 1 ==
- *            memory access violation 2 == bad SYS call
+ *            memory access violation 2 == bad SYS call An optional second
+ *            parameter specifies the offending process id. If unspecified, the
+ *            currently executing process will be killed.
  */
 Kernel.prototype.swExceptionHandler = function(params) {
-    this.stdOut.putText("process: " + this.activeProcess.PID
-            + " fatal exception");
+
+    var pid, error;
+    // Extract the error arguments
+    error = params[0];
+    if (params.length > 1) {
+        pid = params[1];
+    } else {
+        pid = this.activeProcess.pid;
+    }
+
+    this.stdOut.putText("process: " + pid + " fatal exception");
     this.stdOut.advanceLine();
 
-    switch (params[0]) {
+    switch (error) {
     case 0:
         // Bad opcode
         this.stdOut.putText("Invalid opcode at byte: " + this.CPU.PC);
@@ -386,7 +411,7 @@ Kernel.prototype.swExceptionHandler = function(params) {
 
     default:
         // Uh-oh
-        this.trapError("BAD EXCEPTION ERROR CODE");
+        this.trace("BAD EXCEPTION ERROR CODE");
         break;
     }
 
@@ -394,9 +419,8 @@ Kernel.prototype.swExceptionHandler = function(params) {
     this.shell.prompt();
 
     // Kill it
-    this.activeProcess.state = 'failed';
-
-    this.freeProcess(this.activeProcess.PID);
+    this.loadedProcesses[pid] = 'failed';
+    this.freeProcess(pid);
 };
 
 /**

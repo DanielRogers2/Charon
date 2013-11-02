@@ -239,7 +239,10 @@ CPU.prototype.FETCH = function() {
  * 
  * @param interrupt_generator
  *            A kernel function that will handle interrupt generation. The CPU
- *            will supply the following interrupts:
+ *            will supply the following interrupts: PROG_EXIT (no arguments)
+ *            when a program exits. SW_FATAL argument: 0 when an invalid opcode
+ *            is encountered. TIMER when the cpu-internal timer hits 0. SYS_CALL
+ *            when the instruction 0xFF is encountered.
  * @param mem_read
  *            A function that allows memory access/reading
  * @param mem_write

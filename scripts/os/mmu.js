@@ -2,15 +2,33 @@
  * Memory management unit
  */
 
-function MMU(kernel) {
+/**
+ * Generates a new Memory management unit
+ * 
+ * @param access_violation_handler
+ *            A function pointer to execute whenever a program violates its
+ *            memory access privileges. The MMU will supply the process id of
+ *            the offending process.
+ * @param pcb_lookup
+ *            A function pointer that will return a process control block for
+ *            either the currently executing process, or the supplied process
+ *            id.
+ * @param memory
+ *            A pointer to main memory for the MMU to read/write to
+ */
+function MMU(access_violation_handler, pcb_lookup, memory) {
 
     // Programs only get 256 bytes of mem
     this.PROGRAM_ALLOWED_MEM = 256;
     // 8 bytes per page
     this.PAGE_SIZE = 8;
 
-    this.kernel = kernel;
-    this.memory = kernel.memory;
+    // Kernel-supplied function for reacting to access violations
+    this.accessViolationHandler = access_violation_handler;
+    // Kernel-supplied access to physical memory
+    this.memory = memory;
+    // Kernel-supplied process control block accessor
+    this.getPcb = pcb_lookup;
 
     // List of free memory pages
     // TODO Set of virtual memory handling
@@ -38,7 +56,7 @@ function MMU(kernel) {
  */
 MMU.prototype.read = function(addr) {
     // Get PCB
-    var pcb = this.kernel.activeProcess;
+    var pcb = this.getPcb();
 
     // Check address is in process memory
     if (addr < pcb.memLimit) {
@@ -50,7 +68,7 @@ MMU.prototype.read = function(addr) {
             console.log(addr);
         }
         // mem access violation
-        this.kernel.queueInterrupt(this.kernel.SW_FATAL_IRQ, [ 1 ]);
+        this.accessViolationHandler(pcb.PID);
     }
 };
 
@@ -62,16 +80,11 @@ MMU.prototype.read = function(addr) {
  *            to remain inside the program's mem space
  * @param byte
  *            The byte of data to write (as a hex value)
+ * @param pid
+ *            [Optional] The process id of the program doing the writing
  */
-MMU.prototype.write = function(addr, byte, process) {
-    var pcb;
-
-    // Get PCB
-    if (process) {
-        pcb = process;
-    } else {
-        pcb = this.kernel.activeProcess;
-    }
+MMU.prototype.write = function(addr, byte, pid) {
+    var pcb = this.getPcb(pid);
 
     if (addr < pcb.memLimit) {
         // Write to address translated into process memory
@@ -82,7 +95,7 @@ MMU.prototype.write = function(addr, byte, process) {
             console.log(addr);
         }
         // mem access violation
-        this.kernel.queueInterrupt(this.kernel.SW_FATAL_IRQ, [ 1 ]);
+        this.accessViolationHandler(pcb.PID);
     }
 };
 

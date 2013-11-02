@@ -264,15 +264,15 @@ function Shell(kernel) {
             var pid = shell.kernel.newPID();
 
             pcb.init(pid);
+            shell.kernel.loadedProcesses[pid] = pcb;
 
             if (DEBUG) {
                 console.log(pcb);
             }
             for ( var i = 0; i < progBytes.length; ++i) {
-                shell.kernel.MMU.write(i, progBytes[i], pcb);
+                shell.kernel.MMU.write(i, progBytes[i], pid);
             }
 
-            shell.kernel.loadedProcesses[pid] = pcb;
             shell.stdOut.putText("PID: " + pid);
         } else {
             shell.stdOut.putText("Invalid Program!");
