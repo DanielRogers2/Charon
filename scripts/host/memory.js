@@ -3,13 +3,23 @@
  * 
  */
 
-function Memory(host) {
+/**
+ * Generates a new memory unit
+ * 
+ * @param display_fn
+ *            An optional function for updating the display of memory. This will
+ *            be called with three arguments: the block address of the update,
+ *            the block-internal address of the update, and the new value
+ */
+function Memory(display_fn) {
 
     this.RAM = [];
     this.SIZE = 768; // bytes of mem
     this.BLOCK_SIZE = 8; // bytes per row of memory
-    this.host = host;
-    
+
+    // host-specified display function
+    this.display = display_fn;
+
     // Initialize ram
     for ( var i = 0; i < Math.floor(this.SIZE / this.BLOCK_SIZE); ++i) {
         this.RAM[i] = [];
@@ -23,8 +33,10 @@ function Memory(host) {
 /**
  * Writes data to the memory at a specified location
  * 
- * @param address The address (as a decimal value) to store data in @param data
- * the data word (as a byte hex value) to store in memory
+ * @param address
+ *            The address (as a decimal value) to store data in
+ * @param data
+ *            the data word (as a byte hex value) to store in memory
  */
 Memory.prototype.write = function(address, data) {
     // I wish js had integer division so I didn't have to do this
@@ -34,14 +46,17 @@ Memory.prototype.write = function(address, data) {
 
     // do memory write
     this.RAM[blockAddr][internalAddr] = data;
-    
-    this.host.updateMemDisplay(blockAddr, internalAddr, data);
+
+    // Render this memory if we've been given a display function pointer
+    if (this.display)
+        this.display(blockAddr, internalAddr, data);
 };
 
 /**
  * Reads data from memory at the specified location
  * 
- * @param address The address to read data from as a decimal value
+ * @param address
+ *            The address to read data from as a decimal value
  * 
  * @return A byte of data (2 hex digits)
  */

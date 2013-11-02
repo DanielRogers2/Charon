@@ -196,7 +196,7 @@ function Kernel(host) {
     this.trace("Connecting hardware interfaces");
     // Interrupt handler for the CPU
     var irq_handle = function(id, param) {
-        if (!param) {
+        if (param === undefined) {
             kernel.queueInterrupt(id, []);
         } else {
             // The CPU passes in a single value, wrap it in an array

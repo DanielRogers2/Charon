@@ -13,6 +13,15 @@
    Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
    ------------ */
 
+/**
+ * Generates a new CPU
+ * 
+ * @param display_fn
+ *            An optional function for displaying the CPU state. This will be
+ *            called with no arguments. The function is expected to look at the
+ *            CPU internals and make a decision on what to do.
+ * 
+ */
 function CPU(display_fn) {
     this.PC = 0; // Program Counter
     this.Acc = 0; // Accumulator
@@ -173,7 +182,7 @@ function CPU(display_fn) {
 CPU.prototype.cycle = function() {
     if (this.trace)
         this.trace("CPU cycle");
-    
+
     // Do the real work here. Be sure to set this.isExecuting appropriately.
     // Fetch
     var data = this.FETCH();

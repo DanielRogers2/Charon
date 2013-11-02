@@ -43,7 +43,11 @@ function Host() {
     this.CPU = new CPU(cpu_displayer);
 
     // Create memory
-    this.memory = new Memory(this);
+    // Memory display function
+    var mem_displayer = function(col, row, data) {
+        host.updateMemDisplay(col, row, data);
+    };
+    this.memory = new Memory(mem_displayer);
     this.kernel = undefined;
 
     this.clock = 0;
