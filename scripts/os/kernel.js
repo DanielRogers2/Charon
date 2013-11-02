@@ -104,7 +104,23 @@ function Kernel( host ) {
 
     // Promoting dynamism through asynchronus timekeeping functions with added
     // synergy via status message updates
-    this.statusBar = new StatusBar(this, this.STATUS_CID);
+    // Custom draw interrupt generator for the status bar
+    var stts_draw_gen = function( canvas ) {
+        // Clone the canvas so updates don't mix up the current display,
+        // and tell the ISR to draw to the status bar canvas
+        var params = [ kernel.STATUS_CID, cloneCanvas(canvas) ];
+        // Generate the actual interrupt
+        kernel.queueInterrupt(kernel.DISPLAY_IRQ, params);
+    };
+    // Set up timeout event generator
+    var timout_ev_gen = function( obj, obj_fun, timeout ) {
+        kernel.addTimedEvent(obj, obj_fun, timeout);
+    };
+    // Get the canvas width and height
+    width = this.host.screens[this.STATUS_CID].width;
+    height = this.host.screens[this.STATUS_CID].height;
+
+    this.statusBar = new StatusBar(width, height, stts_draw_gen, timout_ev_gen);
 
     // Polling is bad. We're god - democracy just makes things slower.
     // Dictatorship is our life blood

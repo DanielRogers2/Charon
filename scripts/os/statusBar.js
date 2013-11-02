@@ -1,20 +1,44 @@
 /*
  * Handles the 'taskbar' portion of the program
  */
-function StatusBar( kernel, canvasID ) {
+
+/**
+ * Generates a new status bar GUI element
+ * 
+ * @param width
+ *            The width of the drawing area
+ * @param height
+ *            The height of the drawing area
+ * @param draw_interrupt_generator
+ *            A function that will generate an interrupt and render output to a
+ *            screen. The generator will be passed a single argument -- a canvas
+ *            element representing the screen to render.
+ * @param timed_event_generator
+ *            A function that will queue up an event to be generated after a set
+ *            time. The function will be passed three arguments: This object,
+ *            the function in this object to call, and the amount of time to
+ *            wait, measured in ms. The function call argument expects the
+ *            system time at event execution to be passed in.
+ */
+function StatusBar( width, height, draw_interrupt_generator,
+        timed_event_generator ) {
     // Properties
     this.CurrentFont = _DefaultFontFamily;
     this.CurrentFontSize = _DefaultFontSize;
+    // Number of pixels between the start of the status area and the start of
+    // the time display area
     this.timeBoxStart = 350;
     this.YPosition = this.CurrentFontSize;
 
-    this.kernel = kernel;
-    this.canvasID = canvasID;
+    // Function to generate draw updates
+    this.genDrawInterrupt = draw_interrupt_generator;
+    // Function to generate timed interrupts
+    this.genTimedEvent = timed_event_generator;
 
     // Backing buffer for updates
     this.screenBuffer = document.createElement('canvas');
-    this.screenBuffer.width = this.kernel.host.screens[this.canvasID].width;
-    this.screenBuffer.height = this.kernel.host.screens[this.canvasID].height;
+    this.screenBuffer.width = width;
+    this.screenBuffer.height = height;
 
     this.drawingContext = this.screenBuffer.getContext('2d');
     this.drawingContext.font = _DefaultFontFamily;
@@ -62,12 +86,11 @@ StatusBar.prototype.updateTime = function( date ) {
         }
 
         // draw to screen
-        var params = [ this.canvasID, cloneCanvas(this.screenBuffer) ];
-        this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
+        this.genDrawInterrupt(this.screenBuffer);
     }
 
     // Update the time in 1/2 a second (or later)
-    this.kernel.addTimedEvent(this, this.updateTime, 500);
+    this.genTimedEvent(this, this.updateTime, 500);
 };
 
 StatusBar.prototype.updateStatus = function( newStatus ) {

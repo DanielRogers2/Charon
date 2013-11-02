@@ -17,7 +17,7 @@
  * @param draw_interrupt_generator
  *            A function that will generate an interrupt and render output to a
  *            screen. The generator will be passed a single argument -- a canvas
- *            element reprsenting the screen to render.
+ *            element representing the screen to render.
  * @param inputQ
  *            A queue containing characters for this console to render
  * @param command_handler
