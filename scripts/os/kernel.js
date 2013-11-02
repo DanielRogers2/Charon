@@ -88,8 +88,8 @@ function Kernel( host ) {
         kernel.shell.handleInput(buffer);
     };
     // Get its width and height
-    var width = host.screens[this.CONSOLE_CID].width;
-    var height = host.screens[this.CONSOLE_CID].height;
+    var width = this.host.screens[this.CONSOLE_CID].width;
+    var height = this.host.screens[this.CONSOLE_CID].height;
     // Make the console
     this.console = new CLIconsole(width, height, cnsl_draw_irg, this.inputQ,
             execute_shell_cmd);
@@ -128,7 +128,8 @@ function Kernel( host ) {
     // load the Display Device Driver
     this.trace("Loading the display driver");
     this.displayDriver = new DeviceDriverDisplay(this);
-    this.displayDriver.driverEntry();
+    // Set it up to refer to the host screens and contexts
+    this.displayDriver.driverEntry(this.host.screens, this.host.contexts);
 
     this.trace(this.displayDriver.status);
     this.IV[this.DISPLAY_IRQ] = function( params ) {
