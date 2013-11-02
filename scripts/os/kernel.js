@@ -167,12 +167,28 @@ function Kernel(host) {
 
     // Processes loaded into memory -- the resident queue
     this.loadedProcesses = {};
+
+    this.trace("Setting up the short term scheduler");
     // The ready queue
     this.readyQueue = new Queue();
     // Set up a new short-term scheduler
-    this.shortTermSched = new STS(this);
+    // Tracing function for the CPU, STS
+    var tracer = function(msg) {
+        kernel.trace(msg);
+    };
 
-    this.trace("Setting up the short term scheduler");
+    // Context switch handling function for the STS
+    var ctxt_switcher = function(pid) {
+        kernel.queueInterrupt(kernel.CTXT_SWITCH_IRQ, [ pid ]);
+    };
+    // Updates the cpu timer for the STS
+    var cpu_t_updater = function(ticks) {
+        kernel.CPU.timer = ticks;
+    };
+    
+    this.shortTermSched = new STS(this.readyQueue, ctxt_switcher,
+            cpu_t_updater, tracer);
+
     this.IV[this.CPU_TIMER_IRQ] = function(params) {
         kernel.trace("Scheduling decision");
         // Need to make a scheduling decision
@@ -226,11 +242,6 @@ function Kernel(host) {
     // Memory write handler for the CPU
     var write_handle = function(addr, byte) {
         kernel.MMU.write(addr, byte);
-    };
-
-    // Tracing function for the CPU
-    var tracer = function(msg) {
-        kernel.trace(msg);
     };
 
     // Connect CPU interface

@@ -69,6 +69,7 @@ MMU.prototype.read = function(addr) {
         }
         // mem access violation
         this.accessViolationHandler(pcb.PID);
+        return '0x00';
     }
 };
 

@@ -6,11 +6,24 @@
 
 /**
  * Short-term scheduler class
+ * 
+ * @param readyQueue
+ *            A program ready queue storing processes waiting to be executed
+ * @param ctxt_switch_handler
+ *            A function that handles context switches. The scheduler will pass
+ *            in the program that should be switched to.
+ * @param timer_updater
+ *            A function that handles updating a timer. STS.decide() should be
+ *            called whenever the timer hits
+ * @param tracer
+ *            An optional function to handle tracing messages
  */
-
-function STS(kernel) {
+function STS(readyQueue, ctxt_switch_handler, timer_updater, tracer) {
     // Hookup the API
-    this.kernel = kernel;
+    this.readyQueue = readyQueue;
+    this.contextSwitchHandler = ctxt_switch_handler;
+    this.updateTimer = timer_updater;
+    this.trace = tracer;
 
     // Nothing to set this too yet, but why not have it
     this.mode = 'RoundRobin';
@@ -23,17 +36,18 @@ function STS(kernel) {
 
 // Make a scheduling decision
 STS.prototype.decide = function() {
-    if (!this.kernel.activeProcess || this.mode === 'RoundRobin') {
+    if (this.mode === 'RoundRobin') {
         // No process running, or our quantum was triggered
-        this.kernel.trace("RR Switch");
+        if (this.trace)
+            this.trace("RR Switch");
+        
         // The quantum says to switch
-        if (this.kernel.readyQueue.getSize() > 0) {
+        if (this.readyQueue.getSize() > 0) {
             // There is a program to switch to
             // Set up the context switch
-            var params = [ this.kernel.readyQueue.dequeue() ];
-            this.kernel.queueInterrupt(this.kernel.CTXT_SWITCH_IRQ, params);
+            this.contextSwitchHandler(this.readyQueue.dequeue());
         }
-        // Tell the CPU how many cycles to wait before eviction
-        this.kernel.CPU.timer = this.quantum;
+        // Set the timer to next decision
+        this.updateTimer(this.quantum);
     }
 };
