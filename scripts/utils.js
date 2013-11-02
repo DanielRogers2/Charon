@@ -98,10 +98,10 @@ function hexToDec( hexval ) {
  *            Expects an integer
  */
 function decToHex( decval ) {
+    var hex = "";
+    
     // Only do work if decval is != 0
     if ( decval != 0 ) {
-
-        var hex = "";
         // Log16 of value gives the largest power of 16 contained in it
         // No log16 method, so need to transform
         var max_p16 = Math.floor(Math.log(decval) / Math.log(16));
