@@ -11,6 +11,9 @@ DeviceDriverDisplay.prototype = new DeviceDriver;
  * @returns {DeviceDriverDisplay}
  */
 function DeviceDriverDisplay( ) {
+    // Class-specific attributes for handling draw calls
+    this.screens = undefined;
+    this.contexts = undefined;
 }
 
 /**

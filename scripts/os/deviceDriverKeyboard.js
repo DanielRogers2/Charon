@@ -6,89 +6,97 @@
    The Kernel Keyboard Device Driver.
    ---------------------------------- */
 
-DeviceDriverKeyboard.prototype = new DeviceDriver; // "Inherit" from prototype
-// DeviceDriver in
-// deviceDriver.js.
+// "Inherit" from prototype DeviceDriver in deviceDriver.js.
+DeviceDriverKeyboard.prototype = new DeviceDriver;
 
-function DeviceDriverKeyboard( kernel ) {
+/**
+ * Creates a new keyboard device driver. Call driverEntry to initialize
+ * 
+ * @returns {DeviceDriverKeyboard}
+ */
+function DeviceDriverKeyboard( ) {
     // "subclass"-specific attributes.
     // this.buffer = ""; // TODO: Do we need this?
     this.capsToggle = false;
-    this.kernel = kernel;
+
+    // Queue for handling input characters
+    this.inputQ = undefined;
+    // Tracing function for tracing errors
+    this.trace = undefined;
 
     // handle odd translations
+    // shifted numbers
     this.shiftTable =
     {
-        // shifted numbers
-        44 : 60 // , -> <
-        ,
-        45 : 95 // - -> _
-        ,
-        46 : 62 // . -> >
-        ,
-        49 : 33 // 1 -> !
-        ,
-        50 : 64 // 2 -> @
-        ,
-        51 : 35 // 3 -> #
-        ,
-        52 : 36 // 4 -> $
-        ,
-        53 : 37 // 5 -> %
-        ,
-        54 : 94 // 6 -> ^
-        ,
-        55 : 38 // 7 -> &
-        ,
-        56 : 42 // 8 -> *
-        ,
-        57 : 40 // 9 -> (
-        ,
-        48 : 41 // 0 -> )
-        ,
-        47 : 63 // / -> ?
-        ,
-        59 : 58 // ; -> :
-        ,
-        39 : 34 // ' -> "
-        ,
-        96 : 126 // ` -> ~
-        ,
-        61 : 43 // = -> +
-        ,
-        91 : 123 // [ -> {
-        ,
-        93 : 125 // ] -> }
-        ,
+        // , -> <
+        44 : 60,
+        // - -> _
+        45 : 95,
+        // . -> >
+        46 : 62,
+        // 1 -> !
+        49 : 33,
+        // 2 -> @
+        50 : 64,
+        // 3 -> #
+        51 : 35,
+        // 4 -> $
+        52 : 36,
+        // 5 -> %
+        53 : 37,
+        // 6 -> ^
+        54 : 94,
+        // 7 -> &
+        55 : 38,
+        // 8 -> *
+        56 : 42,
+        // 9 -> (
+        57 : 40,
+        // 0 -> )
+        48 : 41,
+        // / -> ?
+        47 : 63,
+        // ; -> :
+        59 : 58,
+        // ' -> "
+        39 : 34,
+        // ` -> ~
+        96 : 126,
+        // = -> +
+        61 : 43,
+        // [ -> {
+        91 : 123,
+        // ] -> }
+        93 : 125,
+        // \ -> |
         92 : 124
-    // \ -> |
     };
 
     // handle non-ascii values for chrome
     this.chromeASCIITrans =
     {
-        188 : 44 // ,
-        ,
-        190 : 46 // .
-        ,
-        191 : 47 // /
-        ,
-        186 : 59 // ;
-        ,
-        222 : 39 // '
-        ,
-        192 : 96 // `
-        ,
-        189 : 45 // -
-        ,
-        187 : 61 // =
-        ,
-        219 : 91 // [
-        ,
-        221 : 93 // ]
-        ,
+        // ,
+        188 : 44,
+        // .
+        190 : 46,
+        // /
+        191 : 47,
+        // ;
+        186 : 59,
+        // '
+        222 : 39,
+        // `
+        192 : 96,
+        // -
+        189 : 45,
+        // =
+        187 : 61,
+        // [
+        219 : 91,
+        // ]
+        221 : 93,
+        // \
         220 : 92
-    // \
     };
 }
 
@@ -97,11 +105,13 @@ DeviceDriverKeyboard.prototype.isr = function( params ) {
     var keyCode = params[0];
     var isShifted = params[1];
 
-    if ( DEBUG === true ) {
+    if ( DEBUG ) {
         console.log(keyCode);
     }
 
-    this.kernel.trace("Key code:" + keyCode + " shifted:" + isShifted);
+    if ( this.trace )
+        this.trace("Key code:" + keyCode + " shifted:" + isShifted);
+
     var chr = "";
     // Check to see if we even want to deal with the key that was pressed.
     if ( ( ( keyCode >= 65 ) && ( keyCode <= 90 ) )
@@ -122,7 +132,7 @@ DeviceDriverKeyboard.prototype.isr = function( params ) {
         // digits
         if ( isShifted ) {
             keyCode = this.shiftTable[keyCode];
-            if ( DEBUG === true ) {
+            if ( DEBUG ) {
                 console.log("shifted to " + keyCode);
             }
         }
@@ -137,7 +147,7 @@ DeviceDriverKeyboard.prototype.isr = function( params ) {
         // ; to '
         // handle Chrome not mapping ; to ' as ASCII
         keyCode = this.chromeASCIITrans[keyCode];
-        if ( DEBUG === true ) {
+        if ( DEBUG ) {
             console.log("translated to " + keyCode);
         }
 
@@ -145,7 +155,7 @@ DeviceDriverKeyboard.prototype.isr = function( params ) {
             // check for < to "
             keyCode = this.shiftTable[keyCode];
 
-            if ( DEBUG === true ) {
+            if ( DEBUG ) {
                 console.log("shifted to " + keyCode);
             }
         }
@@ -168,13 +178,26 @@ DeviceDriverKeyboard.prototype.isr = function( params ) {
         // do nothing
     }
     else {
-        // krnTrapError("BAD_KEYCODE");
-        this.kernel.trace("Key code:" + keyCode + " not recognized..");
+        if ( this.trace )
+            this.trace("Key code:" + keyCode + " not recognized..");
     }
 
-    this.kernel.inputQ.enqueue(chr);
+    this.inputQ.enqueue(chr);
 };
 
-DeviceDriverKeyboard.prototype.driverEntry = function( ) {
+/**
+ * Initializes the device driver for key input handling
+ * 
+ * @param inputQ
+ *            A buffer to queue up processed key inputs
+ * @param tracing_fn
+ *            An optional function for tracing events. Strings representing
+ *            status/trace events will be passed to the function as a single
+ *            argument.
+ */
+DeviceDriverKeyboard.prototype.driverEntry = function( inputQ, tracing_fn ) {
+    this.inputQ = inputQ;
+    this.trace = tracing_fn;
+
     this.status = "loaded";
 };

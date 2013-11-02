@@ -52,6 +52,11 @@ function Kernel( host ) {
     // javascript needs to /die/
     var kernel = this;
 
+    // Tracing function for the CPU, STS, Keyboard Driver
+    var tracer = function( msg ) {
+        kernel.trace(msg);
+    };
+
     // No processes yet
     this.nextPID = 0;
 
@@ -115,8 +120,9 @@ function Kernel( host ) {
     // Load the Keyboard Device Driver
     this.trace("Loading the keyboard device driver.");
     // Generate a new driver
-    this.keyboardDriver = new DeviceDriverKeyboard(this);
-    this.keyboardDriver.driverEntry();
+    this.keyboardDriver = new DeviceDriverKeyboard();
+    // Set it up with the input queue and a tracing function
+    this.keyboardDriver.driverEntry(this.inputQ, tracer);
 
     this.trace(this.keyboardDriver.status);
     // Set it as the keyboard interrupt handler
@@ -186,10 +192,6 @@ function Kernel( host ) {
     this.trace("Setting up the short term scheduler");
     // The ready queue
     this.readyQueue = new Queue();
-    // Tracing function for the CPU, STS
-    var tracer = function( msg ) {
-        kernel.trace(msg);
-    };
 
     // Context switch handling function for the STS
     var ctxt_switcher = function( pid ) {
