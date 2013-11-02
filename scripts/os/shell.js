@@ -5,10 +5,10 @@
    ------------ */
 
 //TODO: Write a base class / prototype for system services and let Shell inherit from it.
-function Shell(kernel) {
+function Shell( kernel ) {
     // Properties
     this.promptStr = "$";
-    this.commandList = [];
+    this.commandList = [ ];
     this.curses = "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]";
     this.apologies = "[sorry]";
     this.kernel = kernel;
@@ -26,7 +26,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "ver";
     sc.description = "- Displays the current version data.";
-    sc.action = function() {
+    sc.action = function( ) {
         shell.stdOut.putText(APP_NAME + " version " + APP_VERSION);
     };
     this.commandList[this.commandList.length] = sc;
@@ -37,9 +37,9 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "help";
     sc.description = "- This is the help command. Seek help.";
-    sc.action = function() {
+    sc.action = function( ) {
         shell.stdOut.putText("Commands:");
-        for ( var i in shell.commandList) {
+        for ( var i in shell.commandList ) {
             shell.stdOut.advanceLine();
             shell.stdOut.putText("  " + shell.commandList[i].command + " "
                     + shell.commandList[i].description);
@@ -53,7 +53,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "shutdown";
     sc.description = "- Shuts down the virtual OS but leaves the underlying hardware simulation running.";
-    sc.action = function() {
+    sc.action = function( ) {
         shell.stdOut.putText("Shutting down...");
         // Call Kernel shutdown routine.
         shell.kernel.Shutdown();
@@ -68,7 +68,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "cls";
     sc.description = "- Clears the screen and resets the cursor position.";
-    sc.action = function() {
+    sc.action = function( ) {
         shell.stdOut.clearScreen();
         shell.stdOut.resetXY();
     };
@@ -80,10 +80,10 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "man";
     sc.description = "<topic> - Displays the MANual page for <topic>.";
-    sc.action = function(args) {
-        if (args.length > 0) {
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
             var topic = args[0];
-            switch (topic) {
+            switch ( topic ) {
             case "help":
                 shell.stdOut
                         .putText("Help displays a list of (hopefully) valid commands.");
@@ -91,7 +91,8 @@ function Shell(kernel) {
             default:
                 shell.stdOut.putText("No manual entry for " + args[0] + ".");
             }
-        } else {
+        }
+        else {
             shell.stdOut.putText("Usage: man <topic>  Please supply a topic.");
         }
     };
@@ -103,14 +104,15 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "trace";
     sc.description = "<on | off> - Turns the OS trace on or off.";
-    sc.action = function(args) {
-        if (args.length > 0) {
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
             var setting = args[0];
-            switch (setting) {
+            switch ( setting ) {
             case "on":
-                if (_Trace && _SarcasticMode) {
+                if ( _Trace && _SarcasticMode ) {
                     shell.stdOut.putText("Trace is already on, dumbass.");
-                } else {
+                }
+                else {
                     _Trace = true;
                     shell.stdOut.putText("Trace ON");
                 }
@@ -124,7 +126,8 @@ function Shell(kernel) {
                 shell.stdOut
                         .putText("Invalid arguement.  Usage: trace <on | off>.");
             }
-        } else {
+        }
+        else {
             shell.stdOut.putText("Usage: trace <on | off>");
         }
     };
@@ -136,14 +139,15 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "rot13";
     sc.description = "<string> - Does rot13 obfuscation on <string>.";
-    sc.action = function(args) {
-        if (args.length > 0) {
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
             shell.stdOut.putText(args[0] + " = '" + rot13(args[0]) + "'"); // Requires
             // Utils.js
             // for
             // rot13()
             // function.
-        } else {
+        }
+        else {
             shell.stdOut
                     .putText("Usage: rot13 <string>  Please supply a string.");
         }
@@ -156,10 +160,11 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "prompt";
     sc.description = "<string> - Sets the prompt.";
-    sc.action = function(args) {
-        if (args.length > 0) {
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
             shell.promptStr = args[0];
-        } else {
+        }
+        else {
             shell.stdOut
                     .putText("Usage: prompt <string>  Please supply a string.");
         }
@@ -172,7 +177,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "date";
     sc.description = " - Displays the current date";
-    sc.action = function() {
+    sc.action = function( ) {
         var date = new Date();
         var clock = new Clock();
 
@@ -192,7 +197,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "whereami";
     sc.description = " - Shows the current location of the system";
-    sc.action = function() {
+    sc.action = function( ) {
         // yuca mountain
         shell.stdOut.putText("36 degrees 56' 25\" N, 116 degrees 29' 06\" W");
     };
@@ -204,10 +209,11 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "status";
     sc.description = " - Set the status bar status message.";
-    sc.action = function(args) {
-        if (args.length > 0) {
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
             shell.kernel.statusBar.updateStatus(args.join(" "));
-        } else {
+        }
+        else {
             shell.stdOut
                     .putText("Usage: status <string>  Please supply a string.");
         }
@@ -220,7 +226,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = 'load';
     sc.description = ' - loads a program from the program entry';
-    sc.action = function() {
+    sc.action = function( ) {
         // Validate hex and load
         var rawProg = document.getElementById("taProgramInput").value;
 
@@ -233,16 +239,16 @@ function Shell(kernel) {
 
         var invalid = invExp.test(rawProg);
         // check if multiple of 2 values (full byes)
-        invalid &= ((rawProg % 2) != 0);
+        invalid &= ( ( rawProg % 2 ) != 0 );
         // Maximum size of 256 for now
-        invalid &= (rawProg.length > (shell.kernel.MMU.PROGRAM_ALLOWED_MEM * 2));
+        invalid &= ( rawProg.length > ( shell.kernel.MMU.PROGRAM_ALLOWED_MEM * 2 ) );
 
         var valid = valExp.test(rawProg);
 
-        if (!invalid && valid) {
+        if ( !invalid && valid ) {
             // split into dual-hex blocks
-            var progBytes = [];
-            for ( var i = 0; i < rawProg.length; i += 2) {
+            var progBytes = [ ];
+            for ( var i = 0; i < rawProg.length; i += 2 ) {
                 progBytes[i / 2] = rawProg.slice(i, i + 2);
             }
 
@@ -252,7 +258,7 @@ function Shell(kernel) {
             // Update the memory used by the PCB
             var success = shell.kernel.MMU.allocateMem(pcb,
                     shell.kernel.MMU.PROGRAM_ALLOWED_MEM);
-            if (!success) {
+            if ( !success ) {
                 // Couldn't allocate memory
                 shell.stdOut.putText("Not enough memory");
                 return;
@@ -266,15 +272,16 @@ function Shell(kernel) {
             pcb.init(pid);
             shell.kernel.loadedProcesses[pid] = pcb;
 
-            if (DEBUG) {
+            if ( DEBUG ) {
                 console.log(pcb);
             }
-            for ( var i = 0; i < progBytes.length; ++i) {
+            for ( var i = 0; i < progBytes.length; ++i ) {
                 shell.kernel.MMU.write(i, progBytes[i], pid);
             }
 
             shell.stdOut.putText("PID: " + pid);
-        } else {
+        }
+        else {
             shell.stdOut.putText("Invalid Program!");
         }
 
@@ -287,29 +294,32 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = 'run';
     sc.description = ' <pid> [pids...] - run loaded programs with <pid> or [pids]';
-    sc.action = function(args) {
-        if (args.length > 0) {
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
             // Does the actual work to load a process or print debug info
-            var ld = function(pid) {
-                if (pid in shell.kernel.loadedProcesses) {
+            var ld = function( pid ) {
+                if ( pid in shell.kernel.loadedProcesses ) {
                     // Valid process to execute
                     shell.kernel.queueProgram(pid);
-                } else {
+                }
+                else {
                     shell.stdOut.putText("No such program");
                 }
             };
 
             // \javascript\...
-            if (args.length > 1) {
-                for ( var pid in args) {
+            if ( args.length > 1 ) {
+                for ( var pid in args ) {
                     ld(pid);
                 }
-            } else {
+            }
+            else {
                 // \JAVASCRIPT\
                 var pid = parseInt(args[0]);
                 ld(pid);
             }
-        } else {
+        }
+        else {
             shell.stdOut.putText("Please supply a PID");
         }
     };
@@ -321,14 +331,14 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = 'runall';
     sc.description = ' - executes all loaded programs';
-    sc.action = function(args) {
+    sc.action = function( args ) {
         var loaded = false;
-        for ( var pid in shell.kernel.loadedProcesses) {
+        for ( var pid in shell.kernel.loadedProcesses ) {
             shell.kernel.queueProgram(pid);
             loaded = true;
         }
 
-        if (!loaded) {
+        if ( !loaded ) {
             shell.stdOut.putText("No loaded processes");
         }
     };
@@ -340,14 +350,16 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = 'quantum';
     sc.description = ' - sets the number of CPU cycles for RR scheduling (default == 6)';
-    sc.action = function(args) {
-        if (args[0] === 'default') {
+    sc.action = function( args ) {
+        if ( args[0] === 'default' ) {
             shell.kernel.shortTermSched.quantum = shell.kernel.shortTermSched.DEFAULT_QUANTUM;
             shell.stdOut.putText("Reset quantum to default");
-        } else if (args[0] > 0) {
+        }
+        else if ( args[0] > 0 ) {
             shell.kernel.shortTermSched.quantum = parseInt(args[0]);
             shell.stdOut.putText("Set quantum to: " + args[0]);
-        } else {
+        }
+        else {
             shell.stdOut.putText("Invalid quantum");
         }
     };
@@ -359,9 +371,9 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = 'step';
     sc.description = ' <pid> - single step a loaded program with <pid>';
-    sc.action = function(args) {
-        if (args.length > 0) {
-            if (args[0] in shell.kernel.loadedProcesses) {
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
+            if ( args[0] in shell.kernel.loadedProcesses ) {
                 // Have an actual process we can execute
                 // TODO: Put on ready queue and then execute for scheduling
                 shell.kernel.activeProcess = shell.kernel.loadedProcesses[args[0]];
@@ -376,10 +388,12 @@ function Shell(kernel) {
                 shell.kernel.activeProcess.state = "running";
 
                 shell.stdOut.putText("Program Ready, hit Step button to step");
-            } else {
+            }
+            else {
                 shell.stdOut.putText("No such process");
             }
-        } else {
+        }
+        else {
             shell.stdOut.putText("Please supply a PID");
         }
     };
@@ -391,28 +405,30 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = 'ps';
     sc.description = ' - display active process ids, specify -l for loaded';
-    sc.action = function(args) {
-        if (args[0] === "-l") {
+    sc.action = function( args ) {
+        if ( args[0] === "-l" ) {
             var printed = false;
             shell.stdOut.putText("Loaded processes: ");
-            for ( var pid in shell.kernel.loadedProcesses) {
+            for ( var pid in shell.kernel.loadedProcesses ) {
                 shell.stdOut.putText(pid + " ");
                 printed = true;
             }
 
             // We didn't display a process
-            if (!printed) {
+            if ( !printed ) {
                 shell.stdOut.putText("None");
             }
 
-        } else if (shell.kernel.activeProcess) {
+        }
+        else if ( shell.kernel.activeProcess ) {
             shell.stdOut.putText("Active PIDs: ");
             shell.stdOut.putText(shell.kernel.activeProcess.PID + " ");
 
-            for ( var i = 0; i < shell.kernel.readyQueue.getSize(); ++i) {
+            for ( var i = 0; i < shell.kernel.readyQueue.getSize(); ++i ) {
                 shell.stdOut.putText(shell.kernel.readyQueue.q[i] + " ");
             }
-        } else {
+        }
+        else {
             shell.stdOut.putText("No active processes");
         }
     };
@@ -424,19 +440,21 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = 'kill';
     sc.description = ' <pid> - kills an active process with pid <pid>';
-    sc.action = function(args) {
-        if (args.length > 0 && args[0] in shell.kernel.loadedProcesses) {
+    sc.action = function( args ) {
+        if ( args.length > 0 && args[0] in shell.kernel.loadedProcesses ) {
             // See if it's running or queued
             var pid = parseInt(args[0]);
-            if ((shell.kernel.activeProcess && shell.kernel.activeProcess.PID == pid)
-                    || shell.kernel.readyQueue.q.indexOf(pid) > -1) {
+            if ( ( shell.kernel.activeProcess && shell.kernel.activeProcess.PID == pid )
+                    || shell.kernel.readyQueue.q.indexOf(pid) > -1 ) {
                 shell.kernel.freeProcess(pid);
                 shell.stdOut.putText("Killed PID: " + pid);
-            } else {
+            }
+            else {
                 shell.stdOut
                         .putText("Use unload to remove loaded, but non-active, processes");
             }
-        } else {
+        }
+        else {
             shell.stdOut.putText("Please supply a valid PID");
         }
     };
@@ -448,17 +466,19 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = 'unload';
     sc.description = ' <pid> - removes an inactive process';
-    sc.action = function(args) {
-        if (args.length > 0 && args[0] in shell.kernel.loadedProcesses) {
+    sc.action = function( args ) {
+        if ( args.length > 0 && args[0] in shell.kernel.loadedProcesses ) {
             // See if it's running or queued
-            if (!(shell.kernel.activeProcess && shell.kernel.activeProcess.PID == args[0])
-                    && shell.kernel.readyQueue.q.indexOf(args[0]) == -1) {
+            if ( !( shell.kernel.activeProcess && shell.kernel.activeProcess.PID == args[0] )
+                    && shell.kernel.readyQueue.q.indexOf(args[0]) == -1 ) {
                 shell.kernel.freeProcess(args[0]);
                 shell.stdOut.putText("Unloaded PID: " + args[0]);
-            } else {
+            }
+            else {
                 shell.stdOut.putText("Use kill to remove active processes");
             }
-        } else {
+        }
+        else {
             shell.stdOut.putText("Please supply a valid PID");
         }
     };
@@ -470,7 +490,7 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = 'crash';
     sc.description = ' - crashes';
-    sc.action = function() {
+    sc.action = function( ) {
         shell.kernel.trapError("forced crash");
     };
     this.commandList[this.commandList.length] = sc;
@@ -481,10 +501,10 @@ function Shell(kernel) {
     sc = new ShellCommand();
     sc.command = "countdown";
     sc.description = " - ????";
-    sc.action = function() {
+    sc.action = function( ) {
         // it's cooler if it scrolls slowly
         clearInterval(shell.kernel.host.hardwareClockID);
-        shell.kernel.host.hardwareClockID = setInterval(function() {
+        shell.kernel.host.hardwareClockID = setInterval(function( ) {
             shell.kernel.host.clockPulse();
         }, 300);
 
@@ -567,7 +587,7 @@ function Shell(kernel) {
         shell.stdOut.putText('And there\'s nothing I can do."');
 
         // reset the timer so they don't deal with sluggish response times
-        var crash = function() {
+        var crash = function( ) {
             shell.kernel.trapError("BSOD");
         };
 
@@ -583,7 +603,7 @@ function Shell(kernel) {
     this.prompt();
 }
 
-Shell.prototype.prompt = function() {
+Shell.prototype.prompt = function( ) {
     this.stdIn.putText(this.promptStr);
 };
 
@@ -592,7 +612,7 @@ Shell.prototype.prompt = function() {
  * 
  * @param buffer
  */
-Shell.prototype.handleInput = function(buffer) {
+Shell.prototype.handleInput = function( buffer ) {
     this.kernel.trace("Shell Command~" + buffer);
     // 
     // Parse the input...
@@ -612,35 +632,39 @@ Shell.prototype.handleInput = function(buffer) {
     // there a better way? Probably.
     var index = 0;
     var found = false;
-    while (!found && index < this.commandList.length) {
-        if (this.commandList[index].command === cmd) {
+    while ( !found && index < this.commandList.length ) {
+        if ( this.commandList[index].command === cmd ) {
             found = true;
             fn = this.commandList[index].action;
-        } else {
+        }
+        else {
             ++index;
         }
     }
-    if (found) {
+    if ( found ) {
         this.execute(fn, args);
-    } else {
+    }
+    else {
         // It's not found, so check for curses and apologies before declaring
         // the command invalid.
-        if (this.curses.indexOf("[" + rot13(cmd) + "]") >= 0) {
+        if ( this.curses.indexOf("[" + rot13(cmd) + "]") >= 0 ) {
             // Check for curses.
             var shell = this;
-            this.execute(function() {
+            this.execute(function( ) {
                 shell.curse();
             });
-        } else if (this.apologies.indexOf("[" + cmd + "]") >= 0) {
+        }
+        else if ( this.apologies.indexOf("[" + cmd + "]") >= 0 ) {
             // Check for apologies.
             var shell = this;
-            this.execute(function() {
+            this.execute(function( ) {
                 shell.apology();
             });
-        } else {
+        }
+        else {
             // It's just a bad command.
             var shell = this;
-            this.execute(function() {
+            this.execute(function( ) {
                 shell.invalidCommand();
             });
         }
@@ -652,7 +676,7 @@ Shell.prototype.handleInput = function(buffer) {
  * 
  * @param buffer
  */
-Shell.prototype.parseInput = function(buffer) {
+Shell.prototype.parseInput = function( buffer ) {
     var retVal = new UserCommand();
 
     // 1. Remove leading and trailing spaces.
@@ -674,9 +698,9 @@ Shell.prototype.parseInput = function(buffer) {
     retVal.command = cmd;
 
     // 5. Now create the args array from what's left.
-    for ( var i in tempList) {
+    for ( var i in tempList ) {
         var arg = trim(tempList[i]);
-        if (arg != "") {
+        if ( arg != "" ) {
             retVal.args[retVal.args.length] = tempList[i];
         }
     }
@@ -689,13 +713,13 @@ Shell.prototype.parseInput = function(buffer) {
  * @param fn
  * @param args
  */
-Shell.prototype.execute = function(fn, args) {
+Shell.prototype.execute = function( fn, args ) {
     // We just got a command, so advance the line...
     this.stdOut.advanceLine();
     // ... call the command function passing in the args...
     fn(args);
     // Check to see if we need to advance the line again
-    if (this.stdOut.CurrentXPosition > 0) {
+    if ( this.stdOut.CurrentXPosition > 0 ) {
         this.stdOut.advanceLine();
     }
     // ... and finally write the prompt again.
@@ -704,35 +728,37 @@ Shell.prototype.execute = function(fn, args) {
 
 // Shell Command Functions. Again, not part of Shell() class per se', just
 // called from there.
-Shell.prototype.invalidCommand = function() {
+Shell.prototype.invalidCommand = function( ) {
 
     this.stdOut.putText("Invalid Command. ");
-    if (_SarcasticMode) {
+    if ( _SarcasticMode ) {
         this.stdOut.putText("Duh. Go back to your Speak & Spell.");
-    } else {
+    }
+    else {
         this.stdOut.putText("Type 'help' for, well... help.");
     }
 };
 
-Shell.prototype.curse = function() {
+Shell.prototype.curse = function( ) {
     this.stdOut.putText("Oh, so that's how it's going to be, eh? Fine.");
     this.stdOut.advanceLine();
     this.stdOut.putText("Bitch.");
     _SarcasticMode = true;
 };
 
-Shell.prototype.apology = function() {
-    if (_SarcasticMode) {
+Shell.prototype.apology = function( ) {
+    if ( _SarcasticMode ) {
         this.stdOut.putText("Okay. I forgive you. This time.");
         _SarcasticMode = false;
-    } else {
+    }
+    else {
         this.stdOut.putText("For what?");
     }
 };
 
 // An "interior" or "private" class (prototype) used only inside Shell() (we
 // hope).
-function ShellCommand() {
+function ShellCommand( ) {
     // Properties
     this.command = "";
     this.description = "";
@@ -741,8 +767,8 @@ function ShellCommand() {
 
 // Another "interior" or "private" class (prototype) used only inside Shell()
 // (we hope).
-function UserCommand() {
+function UserCommand( ) {
     // Properties
     this.command = "";
-    this.args = [];
+    this.args = [ ];
 }

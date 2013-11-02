@@ -15,20 +15,21 @@
    Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
    ------------ */
 
-window.onload = function() {
+window.onload = function( ) {
     // Get the ball rolling
     _HOST = new Host();
 };
+
 /**
  * Get the base hardware interfaces set up
  */
-function Host() {
-    this.screens = [];
+function Host( ) {
+    this.screens = [ ];
     this.screens[this.screens.length] = document.getElementById('display');
     this.screens[this.screens.length] = document.getElementById('status');
 
-    this.contexts = [];
-    // Get a global reference to the drawing context.
+    this.contexts = [ ];
+    // Get a global reference to the drawing contexts
     this.contexts[this.contexts.length] = this.screens[this.contexts.length]
             .getContext('2d');
     this.contexts[this.contexts.length] = this.screens[this.contexts.length]
@@ -37,14 +38,14 @@ function Host() {
     // ... Create and initialize the CPU ...
     var host = this;
     // CPU Display update function
-    var cpu_displayer = function() {
+    var cpu_displayer = function( ) {
         host.updateCPUDisplay();
     };
     this.CPU = new CPU(cpu_displayer);
 
     // Create memory
     // Memory display function
-    var mem_displayer = function(col, row, data) {
+    var mem_displayer = function( col, row, data ) {
         host.updateMemDisplay(col, row, data);
     };
     this.memory = new Memory(mem_displayer);
@@ -63,14 +64,14 @@ function Host() {
     document.getElementById("btnStartOS").focus();
 
     // Check for our testing and enrichment core.
-    if (typeof Glados === "function") {
+    if ( typeof Glados === "function" ) {
         _GLaDOS = new Glados();
         _GLaDOS.init();
     }
 }
 
 // Control Events
-Host.prototype.startOS = function(btn) {
+Host.prototype.startOS = function( btn ) {
     // Disable the start button...
     btn.disabled = true;
 
@@ -92,17 +93,17 @@ Host.prototype.startOS = function(btn) {
 
     document.getElementById('divConsole').replaceChild(img, ldScrNode);
 
-    window.setTimeout(function() {
+    window.setTimeout(function( ) {
         document.getElementById('divConsole').replaceChild(ldScrNode, img);
     }, waitTime);
 
-    var loadComplete = function(host) {
+    var loadComplete = function( host ) {
         // .. set focus on the OS console display ...
         document.getElementById("display").focus();
 
         host.kernel = new Kernel(host);
         // ... then set the host clock pulse ...
-        host.hardwareClockID = setInterval(function() {
+        host.hardwareClockID = setInterval(function( ) {
             host.clockPulse();
         }, CPU_CLOCK_INTERVAL);
     };
@@ -111,9 +112,9 @@ Host.prototype.startOS = function(btn) {
     window.setTimeout(loadComplete, waitTime, this);
 };
 
-Host.prototype.log = function(msg, source) {
+Host.prototype.log = function( msg, source ) {
     // Check the source.
-    if (!source) {
+    if ( !source ) {
         source = "?";
     }
 
@@ -130,7 +131,7 @@ Host.prototype.log = function(msg, source) {
     // Optionally update a log database or some streaming service.
 };
 
-Host.prototype.haltOS = function() {
+Host.prototype.haltOS = function( ) {
     this.log("emergency halt", "host");
     this.log("Attempting Kernel shutdown.", "host");
     // Call the OS shutdown routine.
@@ -140,7 +141,7 @@ Host.prototype.haltOS = function() {
     // TODO: Is there anything else we need to do here?
 };
 
-Host.prototype.RESET = function() {
+Host.prototype.RESET = function( ) {
     // The easiest and most thorough way to do this is to reload (not refresh)
     // the document.
     location.reload(true);
@@ -154,7 +155,7 @@ Host.prototype.RESET = function() {
 /*
  * Complete the memory table html element
  */
-Host.prototype.genMemoryTable = function() {
+Host.prototype.genMemoryTable = function( ) {
     var width = this.memory.BLOCK_SIZE;
     var height = this.memory.SIZE / width;
     var block = -1;
@@ -163,17 +164,16 @@ Host.prototype.genMemoryTable = function() {
     var tr, td;
     var rowLbl;
 
-    for ( var i = 0; i < height; ++i) {
-
+    for ( var i = 0; i < height; ++i ) {
         // Add in memory block separators
         var cblock = Math.floor(i * this.memory.BLOCK_SIZE / 255);
 
-        if (cblock > block) {
+        if ( cblock > block ) {
             tr = document.createElement("tr");
             td = document.createElement("td");
             td.appendChild(document.createTextNode("Block: "
                     + decToHex(cblock * 256) + " - "
-                    + decToHex(((cblock + 1) * 256) - 1)));
+                    + decToHex(( ( cblock + 1 ) * 256 ) - 1)));
 
             tr.appendChild(td);
             tblBody.appendChild(tr);
@@ -195,7 +195,7 @@ Host.prototype.genMemoryTable = function() {
 
         tr.appendChild(td);
 
-        for ( var j = 1; j <= width; ++j) {
+        for ( var j = 1; j <= width; ++j ) {
             // Make memory cell
             td = document.createElement("td");
             td.setAttribute("id", "tdr" + i + "c" + j);
@@ -214,8 +214,8 @@ Host.prototype.genMemoryTable = function() {
 /*
  * Update memory display
  */
-Host.prototype.updateMemDisplay = function(col, row, data) {
-    var cellId = "tdr" + col + "c" + (row + 1);
+Host.prototype.updateMemDisplay = function( col, row, data ) {
+    var cellId = "tdr" + col + "c" + ( row + 1 );
 
     var del = document.getElementById(cellId).childNodes[0];
     var dat = document.createTextNode(data);
@@ -227,7 +227,7 @@ Host.prototype.updateMemDisplay = function(col, row, data) {
  * Update CPU display
  */
 // Update HTML element display for cpu
-Host.prototype.updateCPUDisplay = function() {
+Host.prototype.updateCPUDisplay = function( ) {
     document.getElementById("PC1").innerHTML = "0x" + decToHex(this.CPU.PC);
     document.getElementById("ACC1").innerHTML = "0x" + decToHex(this.CPU.Acc);
     document.getElementById("XReg1").innerHTML = "0x" + decToHex(this.CPU.Xreg);
@@ -239,22 +239,22 @@ Host.prototype.updateCPUDisplay = function() {
 //
 // Hardware/Host Clock Pulse
 //
-Host.prototype.clockPulse = function() {
+Host.prototype.clockPulse = function( ) {
     // Increment the hardware (host) clock.
     this.clock++;
     // Call the kernel clock pulse event handler.
     this.kernel.onCPUClockPulse();
 };
 
-Host.prototype.updateRQDisplay = function() {
+Host.prototype.updateRQDisplay = function( ) {
     var table = document.createElement("tbody");
     var tr_sub_ids = [ "state", "pc", "acc", "xreg", "yreg", "zflag", "malloc",
             "iostat" ];
 
     // TODO Ask PCB for this function
     // Returns an array of strings to populate in table data
-    var createDisplayStrings = function(pcb) {
-        var ret = [];
+    var createDisplayStrings = function( pcb ) {
+        var ret = [ ];
         ret.push("State: " + pcb.state);
         ret.push("CPU_PC: " + pcb.PC);
         ret.push("CPU_Acc: " + pcb.Acc);
@@ -266,17 +266,18 @@ Host.prototype.updateRQDisplay = function() {
 
         return ret;
     };
-    if (this.kernel.readyQueue.getSize() == 0) {
+    if ( this.kernel.readyQueue.getSize() == 0 ) {
         // if the readyqueue is empty
         table.innerHTML = "<tr><td>No waiting processes</td></tr>";
-    } else {
+    }
+    else {
         // fill out the table with data
         var tr;
         var attr;
         var td;
         var pcb;
 
-        for ( var i = 0; i < this.kernel.readyQueue.getSize(); ++i) {
+        for ( var i = 0; i < this.kernel.readyQueue.getSize(); ++i ) {
             pcb = this.kernel.loadedProcesses[this.kernel.readyQueue.q[i]];
             // Make a new table row
             tr = document.createElement("tr");
@@ -294,7 +295,7 @@ Host.prototype.updateRQDisplay = function() {
             attr = createDisplayStrings(pcb);
 
             // Generate attribute rows
-            for ( var j = 0; j < attr.length; ++j) {
+            for ( var j = 0; j < attr.length; ++j ) {
                 tr = document.createElement("tr");
                 // Generate a unique id
                 tr.setAttribute("id", "p" + tr_sub_ids[j] + pcb.PID);
@@ -317,23 +318,23 @@ Host.prototype.updateRQDisplay = function() {
 // Keyboard Interrupt, a HARDWARE Interrupt Request. (See pages 560-561 in text
 // book.)
 //
-Host.prototype.enableKeyboardInterrupt = function() {
+Host.prototype.enableKeyboardInterrupt = function( ) {
     // Listen for key press (keydown, actually) events in the Document
     // and call the simulation processor, which will in turn call the
     // OS interrupt handler.
     document.addEventListener("keydown", onKeypress, false);
 };
 
-Host.prototype.disableKeyboardInterrupt = function() {
+Host.prototype.disableKeyboardInterrupt = function( ) {
     document.removeEventListener("keydown", onKeypress, false);
 };
 
-function onKeypress(event) {
+function onKeypress( event ) {
     // The canvas element CAN receive focus if you give it a tab index, which we
     // have.
     // Check that we are processing keystrokes only from the canvas's id (as set
     // in index.html).
-    if (event.target.id === "display") {
+    if ( event.target.id === "display" ) {
         event.preventDefault();
         // Note the pressed key code in the params (Mozilla-specific).
         var params = new Array(event.which, event.shiftKey);

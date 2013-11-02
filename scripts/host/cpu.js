@@ -22,7 +22,7 @@
  *            CPU internals and make a decision on what to do.
  * 
  */
-function CPU(display_fn) {
+function CPU( display_fn ) {
     this.PC = 0; // Program Counter
     this.Acc = 0; // Accumulator
     this.Xreg = 0; // X register
@@ -56,13 +56,13 @@ function CPU(display_fn) {
     // Databits argument is the rest of the bits following the opcode
     // expressed as an array of 2-value hex digits
     // LDA -- load Acc with constant
-    this['A9'] = function(databits) {
+    this['A9'] = function( databits ) {
         this.Acc = hexToDec(databits[1]);
         this.PC_INC(2);
     };
 
     // LDA -- load Acc from mem
-    this['AD'] = function(databits) {
+    this['AD'] = function( databits ) {
         // Get full address
         var addr = databits.join('');
         // convert to decimal for read()
@@ -73,7 +73,7 @@ function CPU(display_fn) {
     };
 
     // STA -- store acc to addr
-    this['8D'] = function(databits) {
+    this['8D'] = function( databits ) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
@@ -82,7 +82,7 @@ function CPU(display_fn) {
     };
 
     // ADC -- add with carry addr to Acc
-    this['6D'] = function(databits) {
+    this['6D'] = function( databits ) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
@@ -94,13 +94,13 @@ function CPU(display_fn) {
     };
 
     // LDX -- load Xreg with const
-    this['A2'] = function(databits) {
+    this['A2'] = function( databits ) {
         this.Xreg = hexToDec(databits[1]);
         this.PC_INC(2);
     };
 
     // LDX -- load Xreg from mem
-    this['AE'] = function(databits) {
+    this['AE'] = function( databits ) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
@@ -110,13 +110,13 @@ function CPU(display_fn) {
     };
 
     // LDY -- load Yreg with const
-    this['A0'] = function(databits) {
+    this['A0'] = function( databits ) {
         this.Yreg = hexToDec(databits[1]);
         this.PC_INC(2);
     };
 
     // LDY -- load Yreg from mem
-    this['AC'] = function(databits) {
+    this['AC'] = function( databits ) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
@@ -125,41 +125,42 @@ function CPU(display_fn) {
     };
 
     // NOP --
-    this['EA'] = function(databits) {
+    this['EA'] = function( databits ) {
         // do nothing
         this.PC_INC(1);
     };
 
     // BRK -- BREAK: execution exit
-    this['00'] = function(databits) {
+    this['00'] = function( databits ) {
         this.interrupt(this.PROG_EXIT_IRQ);
     };
 
     // CPX -- compare Xreg to data in mem
-    this['EC'] = function(databits) {
+    this['EC'] = function( databits ) {
         var addr = databits.join('');
         addr = hexToDec(addr);
 
-        this.Zflag = (this.Xreg === hexToDec(this.read(addr)));
-        this.Zflag = (this.Zflag) ? 1 : 0;
+        this.Zflag = ( this.Xreg === hexToDec(this.read(addr)) );
+        this.Zflag = ( this.Zflag ) ? 1 : 0;
 
         this.PC_INC(3);
     };
 
     // BNE -- branch if Zflag === 0
-    this['D0'] = function(databits) {
-        if (this.Zflag === 0) {
+    this['D0'] = function( databits ) {
+        if ( this.Zflag === 0 ) {
             var jmpBytes = hexToDec(databits[1]);
 
             this.PC_INC(jmpBytes + 2);
-        } else {
+        }
+        else {
             this.PC_INC(2);
         }
 
     };
 
     // INC -- increment value of byte in mem
-    this['EE'] = function(databits) {
+    this['EE'] = function( databits ) {
         var addr = hexToDec(databits.join(''));
 
         var nv = hexToDec(this.read(addr)) + 1;
@@ -173,14 +174,14 @@ function CPU(display_fn) {
     };
 
     // SYS -- system call
-    this['FF'] = function(databits) {
+    this['FF'] = function( databits ) {
         this.interrupt(this.SYS_CALL_IRQ);
         this.PC_INC(1);
     };
 }
 
-CPU.prototype.cycle = function() {
-    if (this.trace)
+CPU.prototype.cycle = function( ) {
+    if ( this.trace )
         this.trace("CPU cycle");
 
     // Do the real work here. Be sure to set this.isExecuting appropriately.
@@ -191,41 +192,47 @@ CPU.prototype.cycle = function() {
     // data is stored with high-byte in low memory
     var databits = data.slice(1).reverse();
 
-    if (op in this) {
+    if ( op in this ) {
         // Execute instruction
         this[op](databits);
-    } else {
+    }
+    else {
         // Invalid opcode
         this.interrupt(this.SW_FATAL_IRQ, 0);
         this.isExecuting = false;
     }
-    if (this.display)
+    
+    //Update the host display
+    if ( this.display )
         this.display();
 
-    --this.timer;
+    //Update the timer if one was set
+    if ( this.timer > 0 ) {
+        --this.timer;
 
-    if (this.timer <= 0) {
-        // timer ended
-        this.interrupt(this.TIMER_IRQ);
+        if ( this.timer == 0 ) {
+            // timer ended
+            this.interrupt(this.TIMER_IRQ);
+        }
     }
 };
 
 // Increment the program counter by the correct number of bytes
-CPU.prototype.PC_INC = function(bytes) {
+CPU.prototype.PC_INC = function( bytes ) {
     // Programs only get 256bytes of memory -- 0-255
-    this.PC = (this.PC + bytes) % 256;
+    this.PC = ( this.PC + bytes ) % 256;
 };
 
 // Fetch instruction
 // returns an array containing hex data for the instruction
 // [opcode byte, databyte1, databyte2, ...]
-CPU.prototype.FETCH = function() {
-    var data = [];
+CPU.prototype.FETCH = function( ) {
+    var data = [ ];
 
     var cbyte = this.PC;
 
     // Opcodes use a max of 3 bytes
-    for ( var i = 0; i < 3; ++i) {
+    for ( var i = 0; i < 3; ++i ) {
         // read in all bytes
         data[i] = this.read(cbyte);
         ++cbyte;
@@ -250,7 +257,7 @@ CPU.prototype.FETCH = function() {
  * @param tracer
  *            A function that prints tracing information, because CPUs do that?
  */
-CPU.prototype.hook = function(interrupt_generator, mem_read, mem_write, tracer) {
+CPU.prototype.hook = function( interrupt_generator, mem_read, mem_write, tracer ) {
     this.read = mem_read;
     this.write = mem_write;
     this.interrupt = interrupt_generator;

@@ -17,7 +17,7 @@
  *            The host hardware simulation
  */
 // Page 8.
-function Kernel(host) {
+function Kernel( host ) {
     // Our constant Defines for IRQ
     // Pages 23 (timer), 9 (interrupts), and 561 (interrupt
     // priority).
@@ -85,12 +85,12 @@ function Kernel(host) {
 
     // Polling is bad. We're god - democracy just makes things slower.
     // Dictatorship is our life blood
-    this.IV = {};
+    this.IV = { };
 
     // Load the timed events driver
     this.trace("Loading Timers");
     // Kernel built-in routine for timers (not the clock)
-    this.IV[this.TIMER_IRQ] = function(params) {
+    this.IV[this.TIMER_IRQ] = function( params ) {
         kernel.timerISR(params);
     };
 
@@ -102,7 +102,7 @@ function Kernel(host) {
 
     this.trace(this.keyboardDriver.status);
     // Set it as the keyboard interrupt handler
-    this.IV[this.KEYBOARD_IRQ] = function(params) {
+    this.IV[this.KEYBOARD_IRQ] = function( params ) {
         kernel.keyboardDriver.isr(params);
         kernel.stdIn.handleInput();
     };
@@ -113,44 +113,45 @@ function Kernel(host) {
     this.displayDriver.driverEntry();
 
     this.trace(this.displayDriver.status);
-    this.IV[this.DISPLAY_IRQ] = function(params) {
+    this.IV[this.DISPLAY_IRQ] = function( params ) {
         kernel.displayDriver.isr(params);
     };
 
     // Software system call handlers
     this.trace("Loading SYS handlers");
-    this.IV[this.SYS_IRQ] = function(params) {
+    this.IV[this.SYS_IRQ] = function( params ) {
         kernel.sysCallHandler();
     };
 
     this.trace("Loading User Software handlers");
     // Software violation handlers
-    this.IV[this.SW_FATAL_IRQ] = function(params) {
+    this.IV[this.SW_FATAL_IRQ] = function( params ) {
         kernel.swExceptionHandler(params);
     };
 
     // Loading program exit handler
-    this.IV[this.PROG_EXIT] = function(params) {
+    this.IV[this.PROG_EXIT] = function( params ) {
         kernel.programCleanup();
     };
 
     // Handle program stepping
-    this.IV[this.PROG_STEP] = function(params) {
+    this.IV[this.PROG_STEP] = function( params ) {
         kernel.CPU.cycle();
     };
 
     // Loads the memory management unit
     this.trace("Loading MMU");
     // Function to handle memory access violations
-    var mem_acc_viol_handlr = function(pid) {
+    var mem_acc_viol_handlr = function( pid ) {
         // Queue a fatal interrupt, indicate that it was fatal
         kernel.queueInterrupt(kernel.SW_FATAL_IRQ, [ 1, pid ]);
     };
     // Function to get process control blocks for the MMU
-    var pcb_lookp = function(pid) {
-        if (pid === undefined) {
+    var pcb_lookp = function( pid ) {
+        if ( pid === undefined ) {
             return kernel.activeProcess;
-        } else {
+        }
+        else {
             return kernel.loadedProcesses[pid];
         }
     };
@@ -161,42 +162,42 @@ function Kernel(host) {
     this.buffers = new Array();
 
     // Processes loaded into memory -- the resident queue
-    this.loadedProcesses = {};
+    this.loadedProcesses = { };
 
     this.trace("Setting up the short term scheduler");
     // The ready queue
     this.readyQueue = new Queue();
-    // Set up a new short-term scheduler
     // Tracing function for the CPU, STS
-    var tracer = function(msg) {
+    var tracer = function( msg ) {
         kernel.trace(msg);
     };
 
     // Context switch handling function for the STS
-    var ctxt_switcher = function(pid) {
+    var ctxt_switcher = function( pid ) {
         kernel.queueInterrupt(kernel.CTXT_SWITCH_IRQ, [ pid ]);
     };
     // Updates the cpu timer for the STS
-    var cpu_t_updater = function(ticks) {
+    var cpu_t_updater = function( ticks ) {
         kernel.CPU.timer = ticks;
     };
 
+    // Set up a new short-term scheduler
     this.shortTermSched = new STS(this.readyQueue, ctxt_switcher,
             cpu_t_updater, tracer);
 
     // Handles the CPU interrupt and executes scheduling decisions
-    this.IV[this.CPU_TIMER_IRQ] = function(params) {
+    this.IV[this.CPU_TIMER_IRQ] = function( params ) {
         kernel.trace("Scheduling decision");
         // Need to make a scheduling decision
         kernel.shortTermSched.decide();
     };
 
     this.trace("Setting up context switch handling");
-    this.IV[this.CTXT_SWITCH_IRQ] = function(params) {
+    this.IV[this.CTXT_SWITCH_IRQ] = function( params ) {
         // Params == pcb to load
         // Sanity check
-        if (params[0] in kernel.loadedProcesses) {
-            if (kernel.activeProcess) {
+        if ( params[0] in kernel.loadedProcesses ) {
+            if ( kernel.activeProcess ) {
                 // Save the active process
                 kernel.activeProcess.synchronize();
                 // Update its state
@@ -212,7 +213,7 @@ function Kernel(host) {
             kernel.activeProcess = proc;
             kernel.activeProcess.state = 'running';
 
-            if (!kernel.CPU.isExecuting)
+            if ( !kernel.CPU.isExecuting )
                 kernel.CPU.isExecuting = true;
 
             kernel.host.updateRQDisplay();
@@ -221,22 +222,23 @@ function Kernel(host) {
 
     this.trace("Connecting hardware interfaces");
     // Interrupt handler for the CPU
-    var irq_handle = function(id, param) {
-        if (param === undefined) {
-            kernel.queueInterrupt(id, []);
-        } else {
+    var irq_handle = function( id, param ) {
+        if ( param === undefined ) {
+            kernel.queueInterrupt(id, [ ]);
+        }
+        else {
             // The CPU passes in a single value, wrap it in an array
             kernel.queueInterrupt(id, [ param ]);
         }
     };
 
     // Memory read handler for the CPU
-    var read_handle = function(addr) {
+    var read_handle = function( addr ) {
         return kernel.MMU.read(addr);
     };
 
     // Memory write handler for the CPU
-    var write_handle = function(addr, byte) {
+    var write_handle = function( addr, byte ) {
         kernel.MMU.write(addr, byte);
     };
 
@@ -253,7 +255,7 @@ function Kernel(host) {
     this.shell = new Shell(this);
 
     // Finally, initiate testing.
-    if (_GLaDOS) {
+    if ( _GLaDOS ) {
         // Give GLaDOS access
         _KernelInputQueue = this.inputQ;
         krnInterruptHandler = this.interruptHandler;
@@ -269,21 +271,21 @@ function Kernel(host) {
  * @param addr
  *            The address in memory to read from
  */
-Kernel.prototype.printStr = function(addr) {
+Kernel.prototype.printStr = function( addr ) {
     // get ASCII data starting at address
-    var data = [];
+    var data = [ ];
     var i = addr;
     var byte = hexToDec(this.MMU.read(i++));
 
     // read until nul byte or MEM ACCESS VIOLATION
-    while (byte != "00") {
+    while ( byte != "00" ) {
         data[data.length] = byte;
         byte = hexToDec(this.MMU.read(i++));
     }
 
     // translate from ascii values to string
     var str = "";
-    for (i = 0; i < data.length; ++i) {
+    for ( i = 0; i < data.length; ++i ) {
         str += String.fromCharCode(data[i]);
     }
 
@@ -298,16 +300,16 @@ Kernel.prototype.printStr = function(addr) {
  * @param data
  *            The data to queue with the interrupt
  */
-Kernel.prototype.queueInterrupt = function(ID, data) {
+Kernel.prototype.queueInterrupt = function( ID, data ) {
     this.IQ.enqueue(new Interrupt(ID, data));
 };
 
 /**
  * Queues a program for execution
  */
-Kernel.prototype.queueProgram = function(pid) {
+Kernel.prototype.queueProgram = function( pid ) {
 
-    if (this.readyQueue.q.indexOf(pid) > -1) {
+    if ( this.readyQueue.q.indexOf(pid) > -1 ) {
         // Don't add twice in a row the same PID
         this.trace("Attempted double PID add");
         return;
@@ -317,13 +319,14 @@ Kernel.prototype.queueProgram = function(pid) {
     var process = this.loadedProcesses[pid];
     process.state = 'ready';
 
-    if (!this.activeProcess) {
+    if ( !this.activeProcess ) {
         // Set up the switch immediately if no programs loaded
         this.activeProcess = process;
         process.load();
         process.state = 'running';
         this.CPU.isExecuting = 'true';
-    } else {
+    }
+    else {
         // Put the program in the ready queue
         this.readyQueue.enqueue(pid);
         this.host.updateRQDisplay();
@@ -340,7 +343,7 @@ Kernel.prototype.queueProgram = function(pid) {
  * @param timeout
  *            The amount of time to wait
  */
-Kernel.prototype.addTimedEvent = function(callee, action, timeout) {
+Kernel.prototype.addTimedEvent = function( callee, action, timeout ) {
     var ir = new Interrupt(this.TIMER_IRQ, [ callee, action ]);
     var delayedEvent = new DelayedInterrupt(ir, timeout);
 
@@ -353,14 +356,14 @@ Kernel.prototype.addTimedEvent = function(callee, action, timeout) {
  * X1: Print Integer in Y Register X2: Print null-terminated string starting @ Y
  * Register address
  */
-Kernel.prototype.sysCallHandler = function() {
-    if (DEBUG) {
+Kernel.prototype.sysCallHandler = function( ) {
+    if ( DEBUG ) {
         console.log("SYS CALL");
         console.log("  x: " + this.CPU.Xreg);
         console.log("  y: " + this.CPU.Yreg);
     }
 
-    switch (this.CPU.Xreg) {
+    switch ( this.CPU.Xreg ) {
     case 1:
         // XREG == 1, print integer
         this.stdOut.putText("" + this.CPU.Yreg);
@@ -386,21 +389,22 @@ Kernel.prototype.sysCallHandler = function() {
  *            parameter specifies the offending process id. If unspecified, the
  *            currently executing process will be killed.
  */
-Kernel.prototype.swExceptionHandler = function(params) {
+Kernel.prototype.swExceptionHandler = function( params ) {
 
     var pid, error;
     // Extract the error arguments
     error = params[0];
-    if (params.length > 1) {
+    if ( params.length > 1 ) {
         pid = params[1];
-    } else {
+    }
+    else {
         pid = this.activeProcess.pid;
     }
 
     this.stdOut.putText("process: " + pid + " fatal exception");
     this.stdOut.advanceLine();
 
-    switch (error) {
+    switch ( error ) {
     case 0:
         // Bad opcode
         this.stdOut.putText("Invalid opcode at byte: " + this.CPU.PC);
@@ -434,7 +438,7 @@ Kernel.prototype.swExceptionHandler = function(params) {
  * Prints data about a program's state post-exit and handles other tasks needed
  * at program exit.
  */
-Kernel.prototype.programCleanup = function() {
+Kernel.prototype.programCleanup = function( ) {
     this.stdOut.advanceLine();
     this.stdOut.putText("Program: " + this.activeProcess.PID + " - Complete");
     this.stdOut.advanceLine();
@@ -447,7 +451,7 @@ Kernel.prototype.programCleanup = function() {
     this.shell.prompt();
 
     // Disable step button on program exit if it was being stepped through
-    if (!document.getElementById('btnStep').disabled) {
+    if ( !document.getElementById('btnStep').disabled ) {
         document.getElementById('btnStep').disabled = true;
     }
 
@@ -457,8 +461,8 @@ Kernel.prototype.programCleanup = function() {
 /**
  * Frees the resources used by the active process
  */
-Kernel.prototype.freeProcess = function(pid) {
-    if (!(pid in this.loadedProcesses)) {
+Kernel.prototype.freeProcess = function( pid ) {
+    if ( !( pid in this.loadedProcesses ) ) {
         this.trace("bad PID free");
         return;
     }
@@ -470,13 +474,13 @@ Kernel.prototype.freeProcess = function(pid) {
     delete this.loadedProcesses[pid];
 
     var rindex = this.readyQueue.q.indexOf(pid);
-    if (rindex > -1) {
+    if ( rindex > -1 ) {
         // Remove it from the ready queue
         this.readyQueue.q.splice(rindex, 1);
         this.host.updateRQDisplay();
     }
 
-    if (this.activeProcess && (pid == this.activeProcess.PID)) {
+    if ( this.activeProcess && ( pid == this.activeProcess.PID ) ) {
         // No active process now
         this.activeProcess = undefined;
         // Can't execute a program if there is nothing to execute
@@ -488,7 +492,7 @@ Kernel.prototype.freeProcess = function(pid) {
 /**
  * Shuts down the kernel
  */
-Kernel.prototype.shutdown = function() {
+Kernel.prototype.shutdown = function( ) {
     this.trace("begin shutdown OS");
     // TODO: Check for running processes. Alert if there are some, alert and
     // stop. Else...
@@ -509,7 +513,7 @@ Kernel.prototype.shutdown = function() {
 /**
  * Runs tasks every hardware clock pulse
  */
-Kernel.prototype.onCPUClockPulse = function() {
+Kernel.prototype.onCPUClockPulse = function( ) {
     /*
      * This gets called from the host hardware sim every time there is a
      * hardware clock pulse. This is NOT the same as a TIMER, which causes an
@@ -517,12 +521,12 @@ Kernel.prototype.onCPUClockPulse = function() {
      * is the clock pulse from the hardware (or host) that tells the kernel that
      * it has to look for interrupts and process them if it finds any.
      */
-    if (this.TEQ.size() > 0) {
+    if ( this.TEQ.size() > 0 ) {
         // decrease time
         this.TEQ.decrement(CPU_CLOCK_INTERVAL);
     }
 
-    if (this.IQ.getSize() > 0) {
+    if ( this.IQ.getSize() > 0 ) {
         // Check for an interrupt, are any. Page 560
         // Process the first interrupt on the interrupt queue.
         // TODO: Implement a priority queue based on the IRQ number/id to
@@ -530,15 +534,18 @@ Kernel.prototype.onCPUClockPulse = function() {
         var interrupt = this.IQ.dequeue();
         this.interruptHandler(interrupt.irq, interrupt.params);
 
-    } else if (this.TEQ.getMin().timeLeft <= 0) {
+    }
+    else if ( this.TEQ.getMin().timeLeft <= 0 ) {
         // handle timed events
         this.IQ.enqueue(this.TEQ.pop().interrupt);
 
-    } else if (this.CPU.isExecuting) {
+    }
+    else if ( this.CPU.isExecuting ) {
         // If there are no interrupts then run one CPU cycle if there is
         // anything being processed.
         this.CPU.cycle();
-    } else {
+    }
+    else {
         // If there are no interrupts and there is nothing being executed then
         // just be idle.
         this.trace("Idle");
@@ -549,7 +556,7 @@ Kernel.prototype.onCPUClockPulse = function() {
 /**
  * Turns on interrupt handling
  */
-Kernel.prototype.enableInterrupts = function() {
+Kernel.prototype.enableInterrupts = function( ) {
     // Keyboard
     this.host.enableKeyboardInterrupt();
     // Put more here.
@@ -558,7 +565,7 @@ Kernel.prototype.enableInterrupts = function() {
 /**
  * Turns off interrupt handling
  */
-Kernel.prototype.disableInterrupts = function() {
+Kernel.prototype.disableInterrupts = function( ) {
     // Keyboard
     this.host.disableKeyboardInterrupt();
     // Put more here.
@@ -573,22 +580,27 @@ Kernel.prototype.disableInterrupts = function() {
  *            The data associated with the interrupt
  */
 // This is the Interrupt Handler Routine. Pages 8 and 560.
-Kernel.prototype.interruptHandler = function(irq, params) {
-    // Trace our entrance here so we can compute Interrupt Latency by analyzing
+Kernel.prototype.interruptHandler = function( irq, params ) {
+    // Trace our entrance here so we can compute Interrupt Latency by
+    // analyzing
     // the log file later on.
     // Page 766.
     this.trace("Handling IRQ~" + irq);
 
-    // Invoke the requested Interrupt Service Routine via Switch/Case rather
+    // Invoke the requested Interrupt Service Routine via Switch/Case
+    // rather
     // than an Interrupt Vector.
-    // Note: There is no need to "dismiss" or acknowledge the interrupts in our
+    // Note: There is no need to "dismiss" or acknowledge the interrupts
+    // in our
     // design here.
-    // Maybe the hardware simulation will grow to support/require that in the
+    // Maybe the hardware simulation will grow to support/require that
+    // in the
     // future.
-    if (irq in this.IV) {
+    if ( irq in this.IV ) {
         // handle interrupt
         this.IV[irq](params);
-    } else {
+    }
+    else {
         this.trapError("Invalid Interrupt Request. irq=" + irq + " params=["
                 + params + "]");
     }
@@ -603,14 +615,14 @@ Kernel.prototype.interruptHandler = function(irq, params) {
 // The built-in TIMER (not clock) Interrupt
 // Service Routine
 // (as opposed to an ISR coming from a device driver).
-Kernel.prototype.timerISR = function(params) {
+Kernel.prototype.timerISR = function( params ) {
     // Check multiprogramming parameters and enforce quanta here.
     // Call the scheduler / context switch here if necessary.
 
     // Kernel can do more important things in the future, for now just execute
     // timer events
-    if (params.length === 2) {
-        if (DEBUG) {
+    if ( params.length === 2 ) {
+        if ( DEBUG ) {
             console.log("executing timed: " + params);
         }
 
@@ -624,7 +636,7 @@ Kernel.prototype.timerISR = function(params) {
  * 
  * @returns {Number}
  */
-Kernel.prototype.newPID = function() {
+Kernel.prototype.newPID = function( ) {
     return this.nextPID++;
 };
 
@@ -645,23 +657,23 @@ Kernel.prototype.newPID = function() {
 // - CloseFile
 
 // Steps program execution
-Kernel.prototype.programStep = function() {
+Kernel.prototype.programStep = function( ) {
     // Registers an interrupt to execute one cycle of the program
-    this.queueInterrupt(this.PROG_STEP, []);
+    this.queueInterrupt(this.PROG_STEP, [ ]);
 };
 
 // OS Utility Routines
 /**
  * diag info
  */
-Kernel.prototype.trace = function(msg) {
+Kernel.prototype.trace = function( msg ) {
     // Check globals to see if trace is set ON. If so, then (maybe) log the
     // message.
-    if (_Trace) {
-        if (msg === "Idle") {
+    if ( _Trace ) {
+        if ( msg === "Idle" ) {
             // We can't log every idle clock pulse because it would lag the
             // browser very quickly.
-            if (this.host.clock % (1000 / CPU_CLOCK_INTERVAL) === 0) // Check
+            if ( this.host.clock % ( 1000 / CPU_CLOCK_INTERVAL ) === 0 ) // Check
             // the
             // CPU_CLOCK_INTERVAL
             // in globals.js
@@ -670,7 +682,8 @@ Kernel.prototype.trace = function(msg) {
                 // line accordingly.
                 this.host.log(msg, "OS");
             }
-        } else {
+        }
+        else {
             this.host.log(msg, "OS");
         }
     }
@@ -679,11 +692,11 @@ Kernel.prototype.trace = function(msg) {
 /**
  * Blue screen of death, very bad
  */
-Kernel.prototype.trapError = function(msg) {
+Kernel.prototype.trapError = function( msg ) {
     this.host.log("OS ERROR - TRAP: " + msg);
     var kernel = this;
 
-    var textOut = function(str) {
+    var textOut = function( str ) {
         var context = kernel.host.contexts[kernel.CONSOLE_CID];
 
         context.strokeStyle = 'black';
@@ -699,10 +712,10 @@ Kernel.prototype.trapError = function(msg) {
 
     };
 
-    if (msg === "BSOD") {
+    if ( msg === "BSOD" ) {
         var crashImg = new Image();
 
-        crashImg.onload = function() {
+        crashImg.onload = function( ) {
             kernel.host.contexts[kernel.CONSOLE_CID].drawImage(crashImg, 0, 0,
                     kernel.host.screens[kernel.CONSOLE_CID].width,
                     kernel.host.screens[kernel.CONSOLE_CID].height);
@@ -715,7 +728,8 @@ Kernel.prototype.trapError = function(msg) {
         // originally from
         // http://www.fanpop.com/clubs/david-bowie/images/348938/title/bowie-wallpaper
         crashImg.src = 'images/bowiesd.jpg';
-    } else {
+    }
+    else {
 
         var str = "SYSTEM ERROR : " + msg + " : CHECK FOR DOS";
 
@@ -727,17 +741,18 @@ Kernel.prototype.trapError = function(msg) {
 
         this.host.contexts[this.CONSOLE_CID].fillStyle = 'blue';
 
-        for (ch = 0; ch < height; ch += nh) {
-            nh = (2 + Math.floor(Math.random() * 5));
+        for ( ch = 0; ch < height; ch += nh ) {
+            nh = ( 2 + Math.floor(Math.random() * 5) );
 
-            for (cw = 0; cw < width; cw += nw) {
-                nw = (2 + Math.floor(Math.random() * 5));
+            for ( cw = 0; cw < width; cw += nw ) {
+                nw = ( 2 + Math.floor(Math.random() * 5) );
 
                 this.host.contexts[this.CONSOLE_CID].fillRect(cw, ch, nw, nh);
 
-                if (blue) {
+                if ( blue ) {
                     this.host.contexts[this.CONSOLE_CID].fillStyle = 'grey';
-                } else {
+                }
+                else {
                     this.host.contexts[this.CONSOLE_CID].fillStyle = 'blue';
                 }
                 blue = !blue;

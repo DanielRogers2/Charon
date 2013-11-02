@@ -7,7 +7,7 @@
    Note: This is not the Shell.  The Shell is the "command line interface" (CLI) or interpreter for this console.
    ------------ */
 
-function CLIconsole(kernel, canvasID) {
+function CLIconsole( kernel, canvasID ) {
     // Properties
     this.CurrentFont = _DefaultFontFamily;
     this.CurrentFontSize = _DefaultFontSize;
@@ -29,13 +29,15 @@ function CLIconsole(kernel, canvasID) {
     this.drawingContext.font = _DefaultFontFamily;
 
     // previously used commands
-    this.commandBuffer = {
-        list : [] // stored list
-        ,
-        maxLen : 10 // max list size
-        ,
+    this.commandBuffer =
+    {
+        // stored list
+        list : [ ],
+        // max list size
+        maxLen : 10,
+        // currently referenced command
         index : 0
-    // currently referenced command
+
     };
 
     this.clearScreen();
@@ -45,7 +47,7 @@ function CLIconsole(kernel, canvasID) {
 /**
  * Removes all text from the screen
  */
-CLIconsole.prototype.clearScreen = function() {
+CLIconsole.prototype.clearScreen = function( ) {
 
     this.drawingContext.clearRect(0, 0, this.screenBuffer.width,
             this.screenBuffer.height);
@@ -53,13 +55,12 @@ CLIconsole.prototype.clearScreen = function() {
     var params = [ this.canvasID, this.screenBuffer ];
 
     this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
-    // _DrawingContext.clearRect(0, 0, _Canvas.width, _Canvas.height);
 };
 
 /**
  * Sets the cursor back to the start of the page
  */
-CLIconsole.prototype.resetXY = function() {
+CLIconsole.prototype.resetXY = function( ) {
     this.CurrentXPosition = 0;
     this.CurrentYPosition = this.CurrentFontSize;
 };
@@ -67,23 +68,23 @@ CLIconsole.prototype.resetXY = function() {
 /**
  * Write characters from the input queue to the screen
  */
-CLIconsole.prototype.handleInput = function() {
-    while (this.kernel.inputQ.getSize() > 0) {
+CLIconsole.prototype.handleInput = function( ) {
+    while ( this.kernel.inputQ.getSize() > 0 ) {
         // Get the next character from the kernel input queue.
         var chr = this.kernel.inputQ.dequeue();
         // Check to see if it's "special" (enter or ctrl-c)
         // or "normal" (anything else that the keyboard device driver gave us).
-        if (chr === String.fromCharCode(13)) // Enter key
+        if ( chr === String.fromCharCode(13) ) // Enter key
         {
             // update recent command list
-            if (this.commandBuffer.index === this.commandBuffer.maxLen) {
+            if ( this.commandBuffer.index === this.commandBuffer.maxLen ) {
                 // wrap around
                 this.commandBuffer.index = 0;
             }
             // store in list
             this.commandBuffer.list[this.commandBuffer.index++] = this.buffer;
 
-            if (DEBUG) {
+            if ( DEBUG ) {
                 console
                         .log("stored: "
                                 + this.commandBuffer.list[this.commandBuffer.index - 1]);
@@ -97,22 +98,22 @@ CLIconsole.prototype.handleInput = function() {
             this.buffer = "";
         }
 
-        else if (chr === 38 || chr === 40) // up/down arrow keys
+        else if ( chr === 38 || chr === 40 ) // up/down arrow keys
         {
-            if (this.commandBuffer.list.length > 0) {
+            if ( this.commandBuffer.list.length > 0 ) {
                 // clear current display
                 var full_lines = 0;
                 var size = this.CurrentXPosition;
                 var charsz = 0;
                 var lc;
 
-                for ( var i = this.buffer.length - 1; i >= 0; --i) {
+                for ( var i = this.buffer.length - 1; i >= 0; --i ) {
                     // get last character
                     lc = this.buffer[i];
                     // move back along line
                     charsz = this.drawingContext.measureText(lc).width;
 
-                    if (size - charsz < 0) {
+                    if ( size - charsz < 0 ) {
                         // line wrap occurred
                         ++full_lines;
                         size = this.screenBuffer.width;
@@ -124,7 +125,7 @@ CLIconsole.prototype.handleInput = function() {
                         // items that will be iterated through later
                         this.buffer = this.buffer.slice(0, i + 1);
 
-                        if (DEBUG) {
+                        if ( DEBUG ) {
                             console.log("buffer post slice: " + this.buffer);
                         }
                     }
@@ -133,7 +134,7 @@ CLIconsole.prototype.handleInput = function() {
                 }
 
                 var clearheight = full_lines
-                        * (this.CurrentFontSize + _FontHeightMargin);
+                        * ( this.CurrentFontSize + _FontHeightMargin );
 
                 // deleting full width for # of full lines
                 this.drawingContext.clearRect(0, this.CurrentYPosition
@@ -160,9 +161,9 @@ CLIconsole.prototype.handleInput = function() {
 
                 // replace buffer with old command
                 // up arrow
-                if (chr === 38) {
+                if ( chr === 38 ) {
                     // index always points to next location to put item in
-                    if (this.commandBuffer.index === 0) {
+                    if ( this.commandBuffer.index === 0 ) {
                         // adjust for first item, use length not MaxLen
                         this.commandBuffer.index = this.commandBuffer.list.length;
                     }
@@ -171,7 +172,7 @@ CLIconsole.prototype.handleInput = function() {
                 }
                 // down arrow
                 else {
-                    if (this.commandBuffer.index === this.commandBuffer.list.length) {
+                    if ( this.commandBuffer.index === this.commandBuffer.list.length ) {
                         // adjust for last item
                         this.commandBuffer.index = 0;
                     }
@@ -185,9 +186,9 @@ CLIconsole.prototype.handleInput = function() {
 
         }
 
-        else if (chr === String.fromCharCode(8)) // backspace
+        else if ( chr === String.fromCharCode(8) ) // backspace
         {
-            if (this.buffer.length > 0) { // stuff to delete
+            if ( this.buffer.length > 0 ) { // stuff to delete
                 // get last character
                 var lc = this.buffer[this.buffer.length - 1];
 
@@ -209,13 +210,16 @@ CLIconsole.prototype.handleInput = function() {
             this.buffer += chr;
         }
 
-        if (DEBUG) {
+        if ( DEBUG ) {
             console.log("buffer: " + this.buffer);
         }
     }
 };
 
-CLIconsole.prototype.putText = function(text) {
+/**
+ * Writes a line of text to the canvas
+ */
+CLIconsole.prototype.putText = function( text ) {
     // My first inclination here was to write two functions: putChar() and
     // putString().
     // Then I remembered that JavaScript is (sadly) untyped and it won't
@@ -226,13 +230,9 @@ CLIconsole.prototype.putText = function(text) {
     // readability, I
     // decided to write one function and use the term "text" to connote string
     // or char.
-    if (DEBUG) {
+    if ( DEBUG ) {
         console.log("handling: " + text);
     }
-
-    // all of this needs to be moved to DriverDisplay when
-    // message passing is implemented.
-    // This is janky but it works for now...
 
     var lines = [ "" ];
     var l_indx = 0;
@@ -241,11 +241,11 @@ CLIconsole.prototype.putText = function(text) {
     var offset = 0;
 
     // set up line wrapping if needed
-    for ( var i = 0; i < text.length; ++i) {
+    for ( var i = 0; i < text.length; ++i ) {
         // check where X position of text end will be
         offset = this.drawingContext.measureText(text[i]).width;
 
-        if (offset + offsets[l_indx] > this.screenBuffer.width) {
+        if ( offset + offsets[l_indx] > this.screenBuffer.width ) {
             // drawing to next line
             lines[++l_indx] = "";
             offsets[l_indx] = 0;
@@ -256,22 +256,20 @@ CLIconsole.prototype.putText = function(text) {
         offsets[l_indx] += offset;
     }
 
-    if (DEBUG) {
+    if ( DEBUG ) {
         console.log("lines: " + lines);
     }
 
-    for ( var i = 0; i < lines.length; ++i) {
+    for ( var i = 0; i < lines.length; ++i ) {
         // Draw the text at the current X and Y coordinates.
         this.drawingContext.fillText(lines[i], this.CurrentXPosition,
                 this.CurrentYPosition);
 
-        // _DrawingContext.fillText(text[i], this.CurrentXPosition,
-        // this.CurrentYPosition);
-
-        if (i < lines.length - 1) {
+        if ( i < lines.length - 1 ) {
             // more lines to draw, just advance line
             this.advanceLine();
-        } else {
+        }
+        else {
             // Move the current X position.
             this.CurrentXPosition = offsets[i];
         }
@@ -281,18 +279,22 @@ CLIconsole.prototype.putText = function(text) {
 
     this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
 
-    if (DEBUG) {
+    if ( DEBUG ) {
         console.log("x: " + this.CurrentXPosition);
         console.log("y: " + this.CurrentYPosition);
     }
 };
 
-CLIconsole.prototype.advanceLine = function() {
+/**
+ * Moves the cursor position down a line, also handles screen scrolling if
+ * necessary
+ */
+CLIconsole.prototype.advanceLine = function( ) {
     this.CurrentXPosition = 0;
     this.CurrentYPosition += this.CurrentFontSize + _FontHeightMargin;
 
     // clip top line of canvas and redraw
-    if (this.CurrentYPosition >= this.screenBuffer.height) {
+    if ( this.CurrentYPosition >= this.screenBuffer.height ) {
         // buffer canvas to hold old canvas during canvas clear
 
         // Pretending this is a page in memory and not a renderable element
@@ -302,10 +304,10 @@ CLIconsole.prototype.advanceLine = function() {
         backBuffer.width = this.screenBuffer.width;
 
         // clip one line from top
-        var clip = (this.CurrentFontSize + _FontHeightMargin);
+        var clip = ( this.CurrentFontSize + _FontHeightMargin );
         var bufferDraw = backBuffer.getContext('2d');
 
-        if (DEBUG) {
+        if ( DEBUG ) {
             console.log("clip size: " + clip);
         }
         // write image to buffer canvas
@@ -323,7 +325,6 @@ CLIconsole.prototype.advanceLine = function() {
         var params = [ this.canvasID, cloneCanvas(this.screenBuffer) ];
 
         this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
-        // _DrawingContext.drawImage(backBuffer, 0, 0);
 
         // we didn't advance the cursor really, so reset it.
         // Otherwise we'll keep on clearing the screen (which is bad)
@@ -331,11 +332,14 @@ CLIconsole.prototype.advanceLine = function() {
     }
 };
 
-CLIconsole.prototype.clearChar = function(char) {
+/**
+ * Wipes a single character from the canvas
+ */
+CLIconsole.prototype.clearChar = function( char ) {
     // get last character
     var charwidth = this.drawingContext.measureText(char).width;
 
-    if (DEBUG) {
+    if ( DEBUG ) {
         console.log("erasing size: (" + charwidth + ")");
     }
 
@@ -343,13 +347,13 @@ CLIconsole.prototype.clearChar = function(char) {
     this.CurrentXPosition -= charwidth;
 
     // see if we need to move back a line
-    if (this.CurrentXPosition < 0) {
+    if ( this.CurrentXPosition < 0 ) {
         // handle if _Canvas.width not a multiple of charwidth
         var charsprln = Math.floor(this.screenBuffer.width / charwidth) - 1;
 
         // set position to end of previous line
         this.CurrentXPosition = charsprln * charwidth;
-        this.CurrentYPosition -= (this.CurrentFontSize + _FontHeightMargin);
+        this.CurrentYPosition -= ( this.CurrentFontSize + _FontHeightMargin );
     }
 
     this.drawingContext.clearRect(this.CurrentXPosition, this.CurrentYPosition

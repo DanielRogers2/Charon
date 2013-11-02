@@ -16,7 +16,7 @@
  * @param memory
  *            A pointer to main memory for the MMU to read/write to
  */
-function MMU(access_violation_handler, pcb_lookup, memory) {
+function MMU( access_violation_handler, pcb_lookup, memory ) {
 
     // Programs only get 256 bytes of mem
     this.PROGRAM_ALLOWED_MEM = 256;
@@ -32,13 +32,13 @@ function MMU(access_violation_handler, pcb_lookup, memory) {
 
     // List of free memory pages
     // TODO Set of virtual memory handling
-    this.freePages = [];
+    this.freePages = [ ];
 
     // Mapping of page values to physical addresses
-    this.pageMap = {};
+    this.pageMap = { };
 
     // Populate list with free physical memory pages
-    for ( var i = 0; i < Math.floor(this.memory.SIZE / this.PAGE_SIZE); ++i) {
+    for ( var i = 0; i < Math.floor(this.memory.SIZE / this.PAGE_SIZE); ++i ) {
         this.freePages[i] = i;
         // Only mapping virtual to physical mem right now, so we don't care
         // about swappint, etc
@@ -54,16 +54,17 @@ function MMU(access_violation_handler, pcb_lookup, memory) {
  *            to remain inside the program's memory space.
  * @return The byte of data at addr.
  */
-MMU.prototype.read = function(addr) {
+MMU.prototype.read = function( addr ) {
     // Get PCB
     var pcb = this.getPcb();
 
     // Check address is in process memory
-    if (addr < pcb.memLimit) {
+    if ( addr < pcb.memLimit ) {
         // Read from address translated into process memory
         return this.memory.read(this.translate(pcb, addr));
-    } else {
-        if (DEBUG) {
+    }
+    else {
+        if ( DEBUG ) {
             console.log(pcb);
             console.log(addr);
         }
@@ -84,14 +85,15 @@ MMU.prototype.read = function(addr) {
  * @param pid
  *            [Optional] The process id of the program doing the writing
  */
-MMU.prototype.write = function(addr, byte, pid) {
+MMU.prototype.write = function( addr, byte, pid ) {
     var pcb = this.getPcb(pid);
 
-    if (addr < pcb.memLimit) {
+    if ( addr < pcb.memLimit ) {
         // Write to address translated into process memory
         this.memory.write(this.translate(pcb, addr), byte);
-    } else {
-        if (DEBUG) {
+    }
+    else {
+        if ( DEBUG ) {
             console.log(pcb);
             console.log(addr);
         }
@@ -103,19 +105,19 @@ MMU.prototype.write = function(addr, byte, pid) {
 /**
  * Zero out the memory for the process
  */
-MMU.prototype.zeroMem = function(pcb) {
+MMU.prototype.zeroMem = function( pcb ) {
     // Zero out all the memory blocks
     var mmu = this;
 
     // Zeroes a page of memory given its starting address
-    var zero = function(pagestart) {
-        for ( var i = 0; i < mmu.PAGE_SIZE; ++i) {
+    var zero = function( pagestart ) {
+        for ( var i = 0; i < mmu.PAGE_SIZE; ++i ) {
             mmu.memory.write(pagestart + i, '00');
         }
     };
 
     // Get each page from the allocated pages and zero them
-    for ( var i = 0; i < pcb.pageList.length; ++i) {
+    for ( var i = 0; i < pcb.pageList.length; ++i ) {
         zero(this.pageMap[pcb.pageList[i]]);
     }
 };
@@ -123,21 +125,21 @@ MMU.prototype.zeroMem = function(pcb) {
  * 
  * @return false if no memory to allocate
  */
-MMU.prototype.allocateMem = function(pcb, bytes) {
+MMU.prototype.allocateMem = function( pcb, bytes ) {
 
-    if (DEBUG) {
+    if ( DEBUG ) {
         console.log("alloc: " + bytes);
-        console.log("free: " + (this.freePages.length * this.PAGE_SIZE));
+        console.log("free: " + ( this.freePages.length * this.PAGE_SIZE ));
     }
 
-    if ((this.freePages.length * this.PAGE_SIZE) < bytes
-            || (pcb.memLimit + bytes) > this.PROGRAM_ALLOWED_MEM) {
+    if ( ( this.freePages.length * this.PAGE_SIZE ) < bytes
+            || ( pcb.memLimit + bytes ) > this.PROGRAM_ALLOWED_MEM ) {
         // There are not enough pages to allocate to the pcb, or it's not
         // allowed to have more
         return false;
     }
 
-    for ( var i = 0; i < bytes; i += this.PAGE_SIZE) {
+    for ( var i = 0; i < bytes; i += this.PAGE_SIZE ) {
         pcb.pageList.push(this.freePages.shift());
     }
 
@@ -150,10 +152,10 @@ MMU.prototype.allocateMem = function(pcb, bytes) {
 /**
  * Frees memory used by a PCB
  */
-MMU.prototype.freeMem = function(pcb, bytes) {
+MMU.prototype.freeMem = function( pcb, bytes ) {
 
     var freed = 0;
-    while (freed + this.PAGE_SIZE <= bytes) {
+    while ( freed + this.PAGE_SIZE <= bytes ) {
         this.freePages.push(pcb.pageList.pop());
         freed += this.PAGE_SIZE;
     }
@@ -163,7 +165,7 @@ MMU.prototype.freeMem = function(pcb, bytes) {
  * Translates an address to the physical memory location Assumes that addr is in
  * the memory allowed for PCB
  */
-MMU.prototype.translate = function(pcb, addr) {
+MMU.prototype.translate = function( pcb, addr ) {
     // Get the page it's looking for
     var pageID = pcb.pageList[Math.floor(addr / this.PAGE_SIZE)];
     // Base page address

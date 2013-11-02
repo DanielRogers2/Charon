@@ -2,7 +2,7 @@
  * Process control block implementation
  */
 
-function PCB(kernel) {
+function PCB( kernel ) {
 
     /*
      * One of new, ready, running, waiting, failed, done
@@ -16,18 +16,18 @@ function PCB(kernel) {
     this.Zflag = 0; // Z-ero flag (Think of it as "isZero".)
 
     this.kernel = kernel;
-    this.memLimit = 0; //Can't put any memory in because no memory allocated
+    this.memLimit = 0; // Can't put any memory in because no memory allocated
     this.PID = 0;
     this.IOWait = false; // not waiting for I/O
-    
-    //No allocated pages yet
-    this.pageList = [];
+
+    // No allocated pages yet
+    this.pageList = [ ];
 }
 
 /*
  * Set up program prior to execution
  */
-PCB.prototype.init = function(pid) {
+PCB.prototype.init = function( pid ) {
     this.PID = pid;
     this.kernel.MMU.zeroMem(this);
     this.state = 'ready'; // Program is ready once loaded
@@ -36,7 +36,7 @@ PCB.prototype.init = function(pid) {
 /*
  * Reset program data
  */
-PCB.prototype.zeroRegisters = function() {
+PCB.prototype.zeroRegisters = function( ) {
     this.PC = 0; // Program Counter
     this.Acc = 0; // Accumulator
     this.Xreg = 0; // X register
@@ -49,7 +49,7 @@ PCB.prototype.zeroRegisters = function() {
 /*
  * Synchronizes PCB with CPU
  */
-PCB.prototype.synchronize = function() {
+PCB.prototype.synchronize = function( ) {
     this.PC = this.kernel.CPU.PC;
     this.Acc = this.kernel.CPU.Acc;
     this.Xreg = this.kernel.CPU.Xreg;
@@ -60,7 +60,7 @@ PCB.prototype.synchronize = function() {
 /**
  * Loads the program state into the CPU
  */
-PCB.prototype.load = function() {
+PCB.prototype.load = function( ) {
     this.kernel.CPU.PC = this.PC;
     this.kernel.CPU.Acc = this.Acc;
     this.kernel.CPU.Xreg = this.Xreg;
@@ -68,7 +68,7 @@ PCB.prototype.load = function() {
     this.kernel.CPU.Zflag = this.Zflag;
 };
 
-PCB.prototype.display = function(output) {
+PCB.prototype.display = function( output ) {
     // Display PCB
     output.advanceLine();
     output.putText("PCB:");

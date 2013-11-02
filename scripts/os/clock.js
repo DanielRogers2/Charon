@@ -2,7 +2,7 @@
  * Handles getting time/date Maybe this should technically be a device driver?
  */
 
-function Clock() {
+function Clock( ) {
     this.months = [ 'January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December' ];
 
@@ -15,18 +15,18 @@ function Clock() {
 /*
  * Get the time in 24hr format as hh:mm:ss
  */
-Clock.prototype.getTimeString = function(date) {
+Clock.prototype.getTimeString = function( date ) {
     var hr = date.getHours();
     var min = date.getMinutes();
     var sec = date.getSeconds();
 
-    if (hr < 10) {
+    if ( hr < 10 ) {
         hr = "0" + hr;
     }
-    if (min < 10) {
+    if ( min < 10 ) {
         min = "0" + min;
     }
-    if (sec < 10) {
+    if ( sec < 10 ) {
         sec = "0" + sec;
     }
 
@@ -36,7 +36,7 @@ Clock.prototype.getTimeString = function(date) {
 /*
  * Get the current date in Weekday, Month dd, yyyy format
  */
-Clock.prototype.getDateString = function(date) {
+Clock.prototype.getDateString = function( date ) {
     var month = this.months[date.getMonth()];
     var wkday = this.dotw[date.getDay()];
 
@@ -44,7 +44,7 @@ Clock.prototype.getDateString = function(date) {
     var end = this.endings[day % 10];
 
     // 11 - 13 use 'th' rather than 11st
-    if (Math.floor(day / 10) === 1) {
+    if ( Math.floor(day / 10) === 1 ) {
         end = 'th';
     }
 
@@ -54,15 +54,15 @@ Clock.prototype.getDateString = function(date) {
 /*
  * get a shortened date string
  */
-Clock.prototype.getShortDate = function(date) {
+Clock.prototype.getShortDate = function( date ) {
     var month = date.getMonth();
     var day = date.getDate();
 
-    if (month < 10) {
+    if ( month < 10 ) {
         month = "0" + month;
     }
 
-    if (day < 10) {
+    if ( day < 10 ) {
         day = "0" + day;
     }
 

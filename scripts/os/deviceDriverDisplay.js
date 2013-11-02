@@ -5,7 +5,7 @@
 
 DeviceDriverDisplay.prototype = new DeviceDriver;
 
-function DeviceDriverDisplay(kernel) {
+function DeviceDriverDisplay( kernel ) {
     this.kernel = kernel;
 }
 
@@ -15,7 +15,7 @@ function DeviceDriverDisplay(kernel) {
  * @param params
  *            [canvasID, Function, screenBuffer]
  */
-DeviceDriverDisplay.prototype.isr = function(params) {
+DeviceDriverDisplay.prototype.isr = function( params ) {
     var canvasID = params[0];
     var args = params[1];
 
@@ -29,6 +29,6 @@ DeviceDriverDisplay.prototype.isr = function(params) {
     context.drawImage(args, 0, 0);
 };
 
-DeviceDriverDisplay.prototype.driverEntry = function() {
+DeviceDriverDisplay.prototype.driverEntry = function( ) {
     this.status = "loaded";
 };

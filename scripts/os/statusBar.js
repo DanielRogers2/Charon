@@ -1,7 +1,7 @@
 /*
  * Handles the 'taskbar' portion of the program
  */
-function StatusBar(kernel, canvasID) {
+function StatusBar( kernel, canvasID ) {
     // Properties
     this.CurrentFont = _DefaultFontFamily;
     this.CurrentFontSize = _DefaultFontSize;
@@ -19,7 +19,7 @@ function StatusBar(kernel, canvasID) {
     this.drawingContext = this.screenBuffer.getContext('2d');
     this.drawingContext.font = _DefaultFontFamily;
 
-    this.status = [];
+    this.status = [ ];
     this.currentLine = 0;
 
     this.lastStatus = [ "" ];
@@ -33,17 +33,17 @@ function StatusBar(kernel, canvasID) {
     this.updateTime(new Date());
 }
 
-StatusBar.prototype.updateTime = function(date) {
+StatusBar.prototype.updateTime = function( date ) {
 
-    if (DEBUG) {
+    if ( DEBUG ) {
         console.log("updating using: " + date);
     }
     // get new time
     var nt = this.clock.getTimeString(date);
     var nd = this.clock.getShortDate(date);
 
-    if (nt != this.lastTime || nd != this.lastDay
-            || this.status != this.lastStatus) {
+    if ( nt != this.lastTime || nd != this.lastDay
+            || this.status != this.lastStatus ) {
 
         this.lastTime = nt;
         this.lastDay = nd;
@@ -57,7 +57,7 @@ StatusBar.prototype.updateTime = function(date) {
         this.drawingContext.fillText(nd + " @ " + nt, this.timeBoxStart,
                 this.YPosition);
 
-        if (this.currentLine === this.status.length) {
+        if ( this.currentLine === this.status.length ) {
             this.currentLine = 0;
         }
 
@@ -66,11 +66,11 @@ StatusBar.prototype.updateTime = function(date) {
         this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
     }
 
-    //Update the time in 1/2 a second (or later)
+    // Update the time in 1/2 a second (or later)
     this.kernel.addTimedEvent(this, this.updateTime, 500);
 };
 
-StatusBar.prototype.updateStatus = function(newStatus) {
+StatusBar.prototype.updateStatus = function( newStatus ) {
     var words = newStatus.split(" ");
     this.status = [ "" ];
     var l_indx = 0;
@@ -81,11 +81,11 @@ StatusBar.prototype.updateStatus = function(newStatus) {
     var max = this.timeBoxStart - this.drawingContext.measureText(" ").width;
 
     // set up line wrapping if needed
-    for ( var i = 0; i < words.length; ++i) {
+    for ( var i = 0; i < words.length; ++i ) {
         // check where X position of text end will be
         n_offset = this.drawingContext.measureText(words[i] + " ").width;
 
-        if ((n_offset + c_offset) > max) {
+        if ( ( n_offset + c_offset ) > max ) {
             // drawing to next line
             this.status[++l_indx] = "";
             c_offset = 0;
@@ -96,8 +96,8 @@ StatusBar.prototype.updateStatus = function(newStatus) {
         c_offset += n_offset;
     }
 
-    if (DEBUG) {
-        for ( var i = 0; i < this.status.length; ++i) {
+    if ( DEBUG ) {
+        for ( var i = 0; i < this.status.length; ++i ) {
             console.log("statuses: " + this.status[i]);
         }
 

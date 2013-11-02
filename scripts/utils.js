@@ -3,9 +3,8 @@
 
    Utility functions.
    -------- */
-
-function trim(str) { // Use a regular expression to remove leading and
-                        // trailing spaces.
+// Use a regular expression to remove leading and trailing spaces.
+function trim( str ) {
     return str.replace(/^\s+ | \s+$/g, "");
     /*
      * Huh? Take a breath. Here we go: - The "|" separates this into two
@@ -18,23 +17,25 @@ function trim(str) { // Use a regular expression to remove leading and
 
 }
 
-function rot13(str) { // An easy-to understand implementation of the famous
-                        // and common Rot13 obfuscator.
-    // You can do this in three lines with a complex regular expression, but I'd
-    // have
-    var retVal = ""; // trouble explaining it in the future. There's a lot to
-                        // be said for obvious code.
-    for ( var i in str) {
+// An easy-to understand implementation of the famous and common Rot13
+// obfuscator. You can do this in three lines with a complex regular expression,
+// but I'd have trouble explaining it in the future. There's a lot to be said
+// for obvious code.
+function rot13( str ) {
+    var retVal = "";
+    for ( var i in str ) {
         var ch = str[i];
         var code = 0;
-        if ("abcedfghijklmABCDEFGHIJKLM".indexOf(ch) >= 0) {
+        if ( "abcedfghijklmABCDEFGHIJKLM".indexOf(ch) >= 0 ) {
             code = str.charCodeAt(i) + 13; // It's okay to use 13. It's not a
-                                            // magic number, it's called rot13.
+            // magic number, it's called rot13.
             retVal = retVal + String.fromCharCode(code);
-        } else if ("nopqrstuvwxyzNOPQRSTUVWXYZ".indexOf(ch) >= 0) {
+        }
+        else if ( "nopqrstuvwxyzNOPQRSTUVWXYZ".indexOf(ch) >= 0 ) {
             code = str.charCodeAt(i) - 13; // It's okay to use 13. See above.
             retVal = retVal + String.fromCharCode(code);
-        } else {
+        }
+        else {
             retVal = retVal + ch;
         }
     }
@@ -44,7 +45,7 @@ function rot13(str) { // An easy-to understand implementation of the famous
 /*
  * Deep copy canvas
  */
-function cloneCanvas(canvas) {
+function cloneCanvas( canvas ) {
     var copy = document.createElement('canvas');
     var ctxt = copy.getContext('2d');
 
@@ -56,46 +57,49 @@ function cloneCanvas(canvas) {
     return copy;
 }
 
-/*
- * Convert Hex to Decimal @param hexval Expects an array (or string) of hex
- * digits
+/**
+ * Convert Hex to Decimal
+ * 
+ * @param hexval
+ *            Expects an array (or string) of hex digits
  */
-function hexToDec(hexval) {
+function hexToDec( hexval ) {
 
-    if (hexval === undefined)
+    if ( hexval === undefined )
         return 0;
 
-    if (hexval.length > 2) {
+    if ( hexval.length > 2 ) {
         // strip 0x
-        if (hexval.slice(0, 2) === "0x") {
+        if ( hexval.slice(0, 2) === "0x" ) {
             hexval = hexval.slice(2);
         }
     }
 
     var decimal = 0;
     var p16 = 0;
-    for ( var i = 0; i < hexval.length; ++i) {
+    for ( var i = 0; i < hexval.length; ++i ) {
         // Traversing string from left to right
         // (in decreasing order of magnitude)
         // Get the power of 16 value for this hex digit
-        p16 = Math.pow(16, (hexval.length - 1) - i);
+        p16 = Math.pow(16, ( hexval.length - 1 ) - i);
 
         // Convert the hex value to its decimal equivalent and then multiply by
         // the appropriate power of 16
-        decimal += (HEXTODEC_TABLE[hexval[i]] * p16);
+        decimal += ( HEXTODEC_TABLE[hexval[i]] * p16 );
     }
 
     return decimal;
 }
 
-/*
+/**
  * Convert Decimal to Hex
  * 
- * @param decval Expects an integer
+ * @param decval
+ *            Expects an integer
  */
-function decToHex(decval) {
+function decToHex( decval ) {
     // Only do work if decval is != 0
-    if (decval != 0) {
+    if ( decval != 0 ) {
 
         var hex = "";
         // Log16 of value gives the largest power of 16 contained in it
@@ -108,16 +112,17 @@ function decToHex(decval) {
         // Stores the unconverted divided out power
         var hexAsDec = 0;
 
-        for ( var i = 0; i <= max_p16; ++i) {
+        for ( var i = 0; i <= max_p16; ++i ) {
 
-            p16 = Math.pow(16, (max_p16 - i));
+            p16 = Math.pow(16, ( max_p16 - i ));
             hexAsDec = Math.floor(decval / p16);
 
             hex += DECTOHEX_TABLE[hexAsDec];
 
             decval = decval % p16;
         }
-    } else {
+    }
+    else {
         hex = "00";
     }
 

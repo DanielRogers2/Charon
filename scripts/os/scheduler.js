@@ -18,7 +18,7 @@
  * @param tracer
  *            An optional function to handle tracing messages
  */
-function STS(readyQueue, ctxt_switch_handler, timer_updater, tracer) {
+function STS( readyQueue, ctxt_switch_handler, timer_updater, tracer ) {
     // Hookup the API
     this.readyQueue = readyQueue;
     this.contextSwitchHandler = ctxt_switch_handler;
@@ -35,14 +35,14 @@ function STS(readyQueue, ctxt_switch_handler, timer_updater, tracer) {
 };
 
 // Make a scheduling decision
-STS.prototype.decide = function() {
-    if (this.mode === 'RoundRobin') {
+STS.prototype.decide = function( ) {
+    if ( this.mode === 'RoundRobin' ) {
         // No process running, or our quantum was triggered
-        if (this.trace)
+        if ( this.trace )
             this.trace("RR Switch");
-        
+
         // The quantum says to switch
-        if (this.readyQueue.getSize() > 0) {
+        if ( this.readyQueue.getSize() > 0 ) {
             // There is a program to switch to
             // Set up the context switch
             this.contextSwitchHandler(this.readyQueue.dequeue());

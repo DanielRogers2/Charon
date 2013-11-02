@@ -39,7 +39,8 @@ var _SarcasticMode = false;
 var _GLaDOS = null;
 
 const
-HEXTODEC_TABLE = {
+HEXTODEC_TABLE =
+{
     0 : 0,
     1 : 1,
     2 : 2,
@@ -59,7 +60,8 @@ HEXTODEC_TABLE = {
 };
 
 const
-DECTOHEX_TABLE = {
+DECTOHEX_TABLE =
+{
     0 : "0",
     1 : "1",
     2 : "2",

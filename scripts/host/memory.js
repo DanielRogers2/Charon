@@ -11,9 +11,9 @@
  *            be called with three arguments: the block address of the update,
  *            the block-internal address of the update, and the new value
  */
-function Memory(display_fn) {
+function Memory( display_fn ) {
 
-    this.RAM = [];
+    this.RAM = [ ];
     this.SIZE = 768; // bytes of mem
     this.BLOCK_SIZE = 8; // bytes per row of memory
 
@@ -21,10 +21,10 @@ function Memory(display_fn) {
     this.display = display_fn;
 
     // Initialize ram
-    for ( var i = 0; i < Math.floor(this.SIZE / this.BLOCK_SIZE); ++i) {
-        this.RAM[i] = [];
+    for ( var i = 0; i < Math.floor(this.SIZE / this.BLOCK_SIZE); ++i ) {
+        this.RAM[i] = [ ];
 
-        for ( var j = 0; j < this.BLOCK_SIZE; ++j) {
+        for ( var j = 0; j < this.BLOCK_SIZE; ++j ) {
             this.RAM[i][j] = 0;
         }
     }
@@ -38,7 +38,7 @@ function Memory(display_fn) {
  * @param data
  *            the data word (as a byte hex value) to store in memory
  */
-Memory.prototype.write = function(address, data) {
+Memory.prototype.write = function( address, data ) {
     // I wish js had integer division so I didn't have to do this
     // every. single. time.
     var blockAddr = Math.floor(address / this.BLOCK_SIZE);
@@ -48,7 +48,7 @@ Memory.prototype.write = function(address, data) {
     this.RAM[blockAddr][internalAddr] = data;
 
     // Render this memory if we've been given a display function pointer
-    if (this.display)
+    if ( this.display )
         this.display(blockAddr, internalAddr, data);
 };
 
@@ -60,7 +60,7 @@ Memory.prototype.write = function(address, data) {
  * 
  * @return A byte of data (2 hex digits)
  */
-Memory.prototype.read = function(address) {
+Memory.prototype.read = function( address ) {
     // Get array index form
     var blockAddr = Math.floor(address / this.BLOCK_SIZE);
     var internalAddr = address % this.BLOCK_SIZE;
@@ -69,7 +69,7 @@ Memory.prototype.read = function(address) {
 
     byte = this.RAM[blockAddr][internalAddr];
     // Make sure to return sets of hex pairs
-    byte = (byte.length == 1) ? '0' + byte : byte;
+    byte = ( byte.length == 1 ) ? '0' + byte : byte;
 
     return byte;
 };
@@ -77,6 +77,6 @@ Memory.prototype.read = function(address) {
 /**
  * I NEEDS MORE RAMS
  */
-Memory.prototype.downloadMoreRam = function(size) {
+Memory.prototype.downloadMoreRam = function( size ) {
     this.SIZE += size;
 };
