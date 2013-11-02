@@ -253,33 +253,25 @@ function Shell( kernel ) {
             }
 
             // Create process control block
-            var pcb = new PCB(shell.kernel);
+            var pcb = shell.kernel.allocateProgram(-1);
 
-            // Update the memory used by the PCB
-            var success = shell.kernel.MMU.allocateMem(pcb,
-                    shell.kernel.MMU.PROGRAM_ALLOWED_MEM);
-            if ( !success ) {
-                // Couldn't allocate memory
-                shell.stdOut.putText("Not enough memory");
+            if ( !pcb ) {
+                // Kernel couldn't create the PCB
+                shell.stdOut.putText("Unable to allocate PCB");
                 return;
             }
 
             shell.stdOut.putText("Loaded Program");
             shell.stdOut.advanceLine();
 
-            var pid = shell.kernel.newPID();
-
-            pcb.init(pid);
-            shell.kernel.loadedProcesses[pid] = pcb;
+            // Initialize the PCB with the program code
+            pcb.init(progBytes);
 
             if ( DEBUG ) {
                 console.log(pcb);
             }
-            for ( var i = 0; i < progBytes.length; ++i ) {
-                shell.kernel.MMU.write(i, progBytes[i], pid);
-            }
 
-            shell.stdOut.putText("PID: " + pid);
+            shell.stdOut.putText("PID: " + pcb.PID);
         }
         else {
             shell.stdOut.putText("Invalid Program!");

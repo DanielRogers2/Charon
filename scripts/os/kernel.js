@@ -669,6 +669,75 @@ Kernel.prototype.timerISR = function( params ) {
 };
 
 /**
+ * Generates and initializes a new PCB, and allocates memory for the process
+ * 
+ * @param size
+ *            The size (in bytes) to allocate to the process. A size of -1 will
+ *            allocate the memory manager defined maximum program memory.
+ * @returns {PCB} A new process control block with allocated memory <size> or
+ *          undefined if the kernel cannot generate a new PCB.
+ */
+Kernel.prototype.allocateProgram = function( size ) {
+
+    var memsize = ( size === -1 ) ? this.MMU.PROGRAM_ALLOWED_MEM : size;
+
+    // Scoped kernel for function creation
+    var kernel = this;
+
+    // Id of the process
+    var pid = this.newPID();
+    // Function to load program code into memory for the PCB
+    var code_loader = function( code ) {
+        for ( var i = 0; i < code.length; ++i ) {
+            // Write each byte to process memory at offset == byte#
+            kernel.MMU.write(i, code[i], pid);
+        }
+    };
+
+    /*
+     * These are very similar to the code in PCB, but this gets rid of the need
+     * for the PCB to worry about CPU implementation, or which CPU is being
+     * accessed, or any special operations that need to happen on CPU register
+     * read/write
+     */
+    // Function to read CPU registers for the PCB
+    var reg_read = function( ) {
+        // Associative array of cpu regs
+        var regs =
+        {
+            'PC' : kernel.CPU.PC,
+            'Acc' : kernel.CPU.Acc,
+            'Xreg' : kernel.CPU.Xreg,
+            'Yreg' : kernel.CPU.Yreg,
+            'Zflag' : kernel.CPU.Zflag
+        };
+        return regs;
+    };
+    // Function to write CPU registers for the PCB
+    var reg_write = function( regs ) {
+        kernel.CPU.PC = regs['PC'];
+        kernel.CPU.Acc = regs['Acc'];
+        kernel.CPU.Xreg = regs['Xreg'];
+        kernel.CPU.Yreg = regs['Yreg'];
+        kernel.CPU.Zflag = regs['Zflag'];
+    };
+    var pcb = new PCB(pid, code_loader, reg_read, reg_write);
+
+    // Allocate memory for the process
+    var success = this.MMU.allocateMem(pcb, memsize);
+
+    if ( !success ) {
+        this.trace("Insufficient memory for program creation");
+        return undefined;
+    }
+
+    // Put the PCB in the resident list
+    this.loadedProcesses[pid] = pcb;
+
+    return pcb;
+};
+
+/**
  * Get the next Process id
  * 
  * @returns {Number}
