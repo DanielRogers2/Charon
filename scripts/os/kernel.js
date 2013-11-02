@@ -75,7 +75,25 @@ function Kernel( host ) {
     this.inputQ = new Queue();
 
     // If users are allowed to give input, might as well do something with it
-    this.console = new CLIconsole(this, this.CONSOLE_CID);
+    // generate draw interrupts to the appropriate canvas
+    var cnsl_draw_irg = function( canvas ) {
+        // Clone the canvas so updates don't mix up the current display,
+        // and tell the ISR to draw to the console canvas
+        var params = [ kernel.CONSOLE_CID, cloneCanvas(canvas) ];
+        // Generate the actual interrupt
+        kernel.queueInterrupt(kernel.DISPLAY_IRQ, params);
+    };
+    // Set up the API hook connecting the console's buffer to the shell
+    var execute_shell_cmd = function( buffer ) {
+        kernel.shell.handleInput(buffer);
+    };
+    // Get its width and height
+    var width = host.screens[this.CONSOLE_CID].width;
+    var height = host.screens[this.CONSOLE_CID].height;
+    // Make the console
+    this.console = new CLIconsole(width, height, cnsl_draw_irg, this.inputQ,
+            execute_shell_cmd);
+
     this.stdIn = this.console;
     this.stdOut = this.console;
 

@@ -7,7 +7,25 @@
    Note: This is not the Shell.  The Shell is the "command line interface" (CLI) or interpreter for this console.
    ------------ */
 
-function CLIconsole( kernel, canvasID ) {
+/**
+ * Generates a new display console
+ * 
+ * @param width
+ *            The width of the console
+ * @param height
+ *            The height of the console
+ * @param draw_interrupt_generator
+ *            A function that will generate an interrupt and render output to a
+ *            screen. The generator will be passed a single argument -- a canvas
+ *            element reprsenting the screen to render.
+ * @param inputQ
+ *            A queue containing characters for this console to render
+ * @param command_handler
+ *            A function to call that will react to the console's character
+ *            buffer contents when an enter key is detected.
+ */
+function CLIconsole( width, height, draw_interrupt_generator, inputQ,
+        command_handler ) {
     // Properties
     this.CurrentFont = _DefaultFontFamily;
     this.CurrentFontSize = _DefaultFontSize;
@@ -16,14 +34,14 @@ function CLIconsole( kernel, canvasID ) {
     this.buffer = "";
 
     // for kernel related stuff
-    this.kernel = kernel;
-
-    this.canvasID = canvasID;
+    this.genDrawInterrupt = draw_interrupt_generator;
+    this.inputQ = inputQ;
+    this.executeCommand = command_handler;
 
     // Backing buffer for updates
     this.screenBuffer = document.createElement('canvas');
-    this.screenBuffer.width = this.kernel.host.screens[this.canvasID].width;
-    this.screenBuffer.height = this.kernel.host.screens[this.canvasID].height;
+    this.screenBuffer.width = width;
+    this.screenBuffer.height = height;
 
     this.drawingContext = this.screenBuffer.getContext('2d');
     this.drawingContext.font = _DefaultFontFamily;
@@ -52,9 +70,7 @@ CLIconsole.prototype.clearScreen = function( ) {
     this.drawingContext.clearRect(0, 0, this.screenBuffer.width,
             this.screenBuffer.height);
 
-    var params = [ this.canvasID, this.screenBuffer ];
-
-    this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
+    this.genDrawInterrupt(this.screenBuffer);
 };
 
 /**
@@ -69,9 +85,9 @@ CLIconsole.prototype.resetXY = function( ) {
  * Write characters from the input queue to the screen
  */
 CLIconsole.prototype.handleInput = function( ) {
-    while ( this.kernel.inputQ.getSize() > 0 ) {
+    while ( this.inputQ.getSize() > 0 ) {
         // Get the next character from the kernel input queue.
-        var chr = this.kernel.inputQ.dequeue();
+        var chr = this.inputQ.dequeue();
         // Check to see if it's "special" (enter or ctrl-c)
         // or "normal" (anything else that the keyboard device driver gave us).
         if ( chr === String.fromCharCode(13) ) // Enter key
@@ -93,7 +109,7 @@ CLIconsole.prototype.handleInput = function( ) {
 
             // The enter key marks the end of a console command, so ...
             // ... tell the shell ...
-            this.kernel.shell.handleInput(this.buffer);
+            this.executeCommand(this.buffer);
             // ... and reset our buffer.
             this.buffer = "";
         }
@@ -151,10 +167,8 @@ CLIconsole.prototype.handleInput = function( ) {
                         - this.CurrentFontSize, start + wipewidth,
                         this.CurrentYPosition + _FontHeightMargin);
 
-                var params = [ this.canvasID, cloneCanvas(this.screenBuffer) ];
-
                 // update screeen
-                this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
+                this.genDrawInterrupt(this.screenBuffer);
 
                 this.CurrentYPosition -= clearheight;
                 this.CurrentXPosition = start;
@@ -275,9 +289,7 @@ CLIconsole.prototype.putText = function( text ) {
         }
     }
 
-    var params = [ this.canvasID, cloneCanvas(this.screenBuffer) ];
-
-    this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
+    this.genDrawInterrupt(this.screenBuffer);
 
     if ( DEBUG ) {
         console.log("x: " + this.CurrentXPosition);
@@ -322,9 +334,7 @@ CLIconsole.prototype.advanceLine = function( ) {
         // restore canvas with clipped data
         this.drawingContext.drawImage(backBuffer, 0, 0);
 
-        var params = [ this.canvasID, cloneCanvas(this.screenBuffer) ];
-
-        this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
+        this.genDrawInterrupt(this.screenBuffer);
 
         // we didn't advance the cursor really, so reset it.
         // Otherwise we'll keep on clearing the screen (which is bad)
@@ -360,7 +370,5 @@ CLIconsole.prototype.clearChar = function( char ) {
             - this.CurrentFontSize, this.CurrentXPosition + charwidth,
             this.CurrentYPosition + _FontHeightMargin);
 
-    var params = [ this.canvasID, cloneCanvas(this.screenBuffer) ];
-
-    this.kernel.queueInterrupt(this.kernel.DISPLAY_IRQ, params);
+    this.genDrawInterrupt(this.screenBuffer);
 };
