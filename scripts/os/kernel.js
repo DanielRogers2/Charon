@@ -693,7 +693,6 @@ Kernel.prototype.allocateProgram = function( size ) {
             kernel.MMU.write(i, code[i], pid);
         }
     };
-
     /*
      * These are very similar to the code in PCB, but this gets rid of the need
      * for the PCB to worry about CPU implementation, or which CPU is being
@@ -730,6 +729,9 @@ Kernel.prototype.allocateProgram = function( size ) {
         this.trace("Insufficient memory for program creation");
         return undefined;
     }
+
+    // Zero out the memory for the program
+    this.MMU.zeroMem(pcb);
 
     // Put the PCB in the resident list
     this.loadedProcesses[pid] = pcb;
