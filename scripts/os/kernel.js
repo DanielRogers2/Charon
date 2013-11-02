@@ -234,6 +234,7 @@ function Kernel( host ) {
         // Params == pcb to load
         // Sanity check
         if ( params[0] in kernel.loadedProcesses ) {
+            kernel.trace("Context switch");
             if ( kernel.activeProcess ) {
                 // Save the active process
                 kernel.activeProcess.synchronize();
