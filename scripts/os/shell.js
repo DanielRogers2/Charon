@@ -239,9 +239,9 @@ function Shell( kernel ) {
 
         var invalid = invExp.test(rawProg);
         // check if multiple of 2 values (full byes)
-        invalid &= ( ( rawProg % 2 ) != 0 );
+        invalid = invalid || ( ( rawProg.length % 2 ) != 0 );
         // Maximum size of 256 for now
-        invalid &= ( rawProg.length > ( shell.kernel.MMU.PROGRAM_ALLOWED_MEM * 2 ) );
+        invalid = invalid || ( rawProg.length > ( shell.kernel.MMU.PROGRAM_ALLOWED_MEM * 2 ) );
 
         var valid = valExp.test(rawProg);
 
