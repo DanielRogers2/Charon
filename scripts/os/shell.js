@@ -238,10 +238,10 @@ function Shell( kernel ) {
         var valExp = new RegExp("[A-F0-9]", "m");
 
         var invalid = invExp.test(rawProg);
-        // check if multiple of 2 values (full byes)
+        // check if multiple of 2 values (full bytes)
         invalid = invalid || ( ( rawProg.length % 2 ) != 0 );
         // Maximum size of 256 for now
-        invalid = invalid || ( rawProg.length > ( shell.kernel.MMU.PROGRAM_ALLOWED_MEM * 2 ) );
+        invalid = invalid || ( rawProg.length > ( shell.kernel.MMU.PROGRAM_ALLOWED_MEM ) );
 
         var valid = valExp.test(rawProg);
 
