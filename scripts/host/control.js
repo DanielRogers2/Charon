@@ -106,6 +106,21 @@ Host.prototype.startOS = function( btn ) {
         host.hardwareClockID = setInterval(function( ) {
             host.clockPulse();
         }, CPU_CLOCK_INTERVAL);
+
+        // Finally, initiate testing.
+        // Needs to be outside of kernel, so that the host->kernel pointer is
+        // set
+        if ( _GLaDOS ) {
+            // Give GLaDOS access
+            _KernelInputQueue = host.kernel.inputQ;
+            krnInterruptHandler = function( ID, params ) {
+                host.kernel.interruptHandler(ID, params);
+            };
+            KEYBOARD_IRQ = host.kernel.KEYBOARD_IRQ;
+
+            // Let her play
+            _GLaDOS.afterStartup();
+        }
     };
 
     // .. and call the OS Kernel Bootstrap routine.

@@ -291,16 +291,6 @@ function Kernel( host ) {
     // Launch the shell.
     this.trace("Creating and Launching the shell.");
     this.shell = new Shell(this);
-
-    // Finally, initiate testing.
-    if ( _GLaDOS ) {
-        // Give GLaDOS access
-        _KernelInputQueue = this.inputQ;
-        krnInterruptHandler = this.interruptHandler;
-
-        // Let her play
-        _GLaDOS.afterStartup();
-    }
 }
 
 /**
@@ -436,7 +426,7 @@ Kernel.prototype.swExceptionHandler = function( params ) {
         pid = params[1];
     }
     else {
-        pid = this.activeProcess.pid;
+        pid = this.activeProcess.PID;
     }
 
     this.stdOut.putText("process: " + pid + " fatal exception");

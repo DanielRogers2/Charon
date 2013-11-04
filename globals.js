@@ -31,6 +31,7 @@ var _Trace = true;
 // GLaDOS still looks at these
 var _KernelInputQueue = null;
 var krnInterruptHandler = null;
+var KEYBOARD_IRQ = null;
 
 // At least this OS is not trying to kill you. (Yet.)
 var _SarcasticMode = false;
