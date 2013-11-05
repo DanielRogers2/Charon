@@ -347,16 +347,14 @@ Kernel.prototype.queueProgram = function( pid ) {
     var process = this.loadedProcesses[pid];
     process.state = 'ready';
 
+    // Put the program in the ready queue
+    this.readyQueue.enqueue(pid);
+
     if ( !this.activeProcess ) {
-        // Set up the switch immediately if no programs loaded
-        this.activeProcess = process;
-        process.load();
-        process.state = 'running';
-        this.CPU.isExecuting = 'true';
+        // Make a decision now, if no active program
+        this.shortTermSched.decide();
     }
     else {
-        // Put the program in the ready queue
-        this.readyQueue.enqueue(pid);
         this.host.updateRQDisplay();
     }
 };
