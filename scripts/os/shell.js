@@ -241,7 +241,8 @@ function Shell( kernel ) {
         // check if multiple of 2 values (full bytes)
         invalid = invalid || ( ( rawProg.length % 2 ) != 0 );
         // Maximum size of 256 for now
-        invalid = invalid || ( rawProg.length > ( shell.kernel.MMU.PROGRAM_ALLOWED_MEM ) );
+        invalid = invalid
+                || ( rawProg.length > ( 2 * shell.kernel.MMU.PROGRAM_ALLOWED_MEM ) );
 
         var valid = valExp.test(rawProg);
 

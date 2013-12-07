@@ -57,6 +57,9 @@ function Host( ) {
     // Complete the memory display
     this.genMemoryTable();
 
+    // Get the HDD
+    this.HDD = new HDD(undefined);
+
     // Clear the log text box.
     document.getElementById("taLog").value = "";
 
@@ -281,47 +284,54 @@ Host.prototype.updateRQDisplay = function( ) {
 
         return ret;
     };
-    if ( this.kernel.readyQueue.getSize() == 0 ) {
+
+    var createPCBDisplay = function( pcb ) {
+        // Make a new table row
+        var tr = document.createElement("tr");
+        // Set the name to == PID
+        tr.setAttribute("id", "pid" + pcb.PID);
+        // Set the name row
+        var td = document.createElement("td");
+        td.setAttribute("id", "pname" + pcb.PID);
+        td.appendChild(document.createTextNode("Process " + pcb.PID));
+        tr.appendChild(td);
+
+        table.appendChild(tr);
+
+        // get attributes
+        attr = createDisplayStrings(pcb);
+
+        // Generate attribute rows
+        for ( var j = 0; j < attr.length; ++j ) {
+            tr = document.createElement("tr");
+            // Generate a unique id
+            tr.setAttribute("id", "p" + tr_sub_ids[j] + pcb.PID);
+            // Set up data node
+            td = document.createElement("td");
+            // Set its data to display the attribute
+            td.appendChild(document.createTextNode(attr[j]));
+
+            tr.appendChild(td);
+            table.appendChild(tr);
+        }
+    };
+
+    if ( !this.kernel.activeProcess && this.kernel.readyQueue.getSize() == 0 ) {
         // if the readyqueue is empty
         table.innerHTML = "<tr><td>No waiting processes</td></tr>";
     }
     else {
         // fill out the table with data
-        var tr;
-        var attr;
-        var td;
+        // First fill in the currently executing process
+        if ( this.kernel.activeProcess ) {
+            createPCBDisplay(this.kernel.activeProcess);
+        }
+
         var pcb;
 
         for ( var i = 0; i < this.kernel.readyQueue.getSize(); ++i ) {
             pcb = this.kernel.loadedProcesses[this.kernel.readyQueue.q[i]];
-            // Make a new table row
-            tr = document.createElement("tr");
-            // Set the name to == PID
-            tr.setAttribute("id", "pid" + pcb.PID);
-            // Set the name row
-            td = document.createElement("td");
-            td.setAttribute("id", "pname" + pcb.PID);
-            td.appendChild(document.createTextNode("Process " + pcb.PID));
-            tr.appendChild(td);
-
-            table.appendChild(tr);
-
-            // get attributes
-            attr = createDisplayStrings(pcb);
-
-            // Generate attribute rows
-            for ( var j = 0; j < attr.length; ++j ) {
-                tr = document.createElement("tr");
-                // Generate a unique id
-                tr.setAttribute("id", "p" + tr_sub_ids[j] + pcb.PID);
-                // Set up data node
-                td = document.createElement("td");
-                // Set its data to display the attribute
-                td.appendChild(document.createTextNode(attr[j]));
-
-                tr.appendChild(td);
-                table.appendChild(tr);
-            }
+            createPCBDisplay(pcb);
         }
     }
 
