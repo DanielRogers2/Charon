@@ -76,6 +76,7 @@ HDD.prototype.write = function( track, sector, block, data ) {
 
     // Perform the write
     sessionStorage.setItem(key, data);
+    this.display();
 
     return true;
 };
