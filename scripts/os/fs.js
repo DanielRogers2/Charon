@@ -1,4 +1,0 @@
-/*
- * Manages the file system
- */
-

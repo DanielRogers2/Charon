@@ -41,6 +41,8 @@ function Kernel( host ) {
     this.CPU_TIMER_IRQ = host.CPU.TIMER_IRQ;
     // Handles context switches
     this.CTXT_SWITCH_IRQ = 8;
+    // Handles file reading/writing
+    this.FILE_IO_IRQ = 9;
 
     // Canvases for drawing
     this.CONSOLE_CID = 0;
@@ -48,6 +50,9 @@ function Kernel( host ) {
 
     // Set up our hardware connections
     this.CPU = host.CPU;
+    this.memory = host.memory;
+    this.host = host;
+    this.HDD = host.HDD;
 
     // javascript needs to /die/
     var kernel = this;
@@ -59,9 +64,6 @@ function Kernel( host ) {
 
     // No processes yet
     this.nextPID = 0;
-
-    this.memory = host.memory;
-    this.host = host;
 
     // Use hostLog because we ALWAYS want this, even if _Trace is off.
     this.host.log("bootstrap", "host");
@@ -178,6 +180,16 @@ function Kernel( host ) {
     // Handle program stepping
     this.IV[this.PROG_STEP] = function( params ) {
         kernel.CPU.cycle();
+    };
+
+    // TODO Implement FS
+    // Set up the file system device driver
+    this.trace("Loading FS");
+    //Load the driver
+    this.fsDriver = new FileSystemDeviceDriver();
+    //Set up the interrupt vector
+    this.IV[this.FILE_IO_IRQ] = function( params ) {
+        
     };
 
     // Loads the memory management unit
@@ -512,7 +524,7 @@ Kernel.prototype.freeProcess = function( pid ) {
         this.CPU.isExecuting = false;
         this.shortTermSched.decide();
     }
-    //Update display
+    // Update display
     this.host.updateRQDisplay();
 };
 
