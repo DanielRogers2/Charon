@@ -47,7 +47,7 @@ function HDD( display_fn ) {
 HDD.prototype.write = function( track, sector, block, data ) {
 
     // Validate write location
-    if ( track >= this.TRACKS || sector >= this.SECTORS || block >= this.BLOCKS ) {
+    if ( !this.validateLocation(track, sector, block) ) {
         // Invalid write location
         console.log("Bad write!");
         return false;
@@ -77,6 +77,46 @@ HDD.prototype.write = function( track, sector, block, data ) {
 
     // Perform the write
     sessionStorage.setItem(key, data);
+
+    return true;
+};
+
+/**
+ * Reads data from a location specified by track, sector, block
+ * 
+ * @param track
+ *            The track to read in as a value in the range 0-this.TRACKS
+ * @param sector
+ *            The sector to read in as a value in the range [0 - this.SECTORS)
+ * @param block
+ *            The block to read as a value in the range [0 - this.BLOCKS)
+ * 
+ * @return The data at location if it's a valid location, else ''
+ * 
+ */
+HDD.prototype.read = function( track, sector, block ) {
+    if ( !this.validateLocation(track, sector, block) ) {
+        // Invalid write location
+        console.log("Bad read!");
+        return '';
+    }
+    // Get read location
+    var key = '' + track + '' + sector + '' + block;
+
+    return sessionStorage.getItem(key);
+};
+
+/**
+ * Validates a requested location as valid for the HDD
+ * 
+ * @return true if it's a valid location
+ */
+HDD.prototype.validateLocation = function( track, sector, block ) {
+    if ( track >= this.TRACKS || sector >= this.SECTORS || block >= this.BLOCKS ) {
+        // Invalid write location
+        console.log("Bad location!");
+        return false;
+    }
 
     return true;
 };
