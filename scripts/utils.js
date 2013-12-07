@@ -58,6 +58,48 @@ function cloneCanvas( canvas ) {
 }
 
 /**
+ * Converts an ascii string to a hex byte array
+ * 
+ * @param string
+ *            The string to convert
+ * @return an string of 2digit hex values representing the passed in string
+ */
+function strToHex( string ) {
+    // Split the string, then get the charcode of each and convert to hex
+    // thanks to
+    // http://stackoverflow.com/questions/16893817/javascript-ascii-string-to-hex-byte-array
+    var hex = string.split('').map(function( c ) {
+        return decToHex(c.charCodeAt(0));
+    });
+
+    return hex.join('');
+};
+
+/**
+ * The inverse of the above, takes a string of 2digit hex bytes and converts to
+ * an ascii string
+ * 
+ * @param hex
+ *            An string of 2digit hex bytes
+ * @returns An ascii string represented by the data
+ */
+function hexToStr( hex ) {
+    // Split the string
+    var data = [ ];
+    hex = hex.split('');
+    for ( var i = 0; i < hex.length; i += 2 ) {
+        data[i / 2] = hex.slice(i, i + 2);
+    }
+
+    // then get the decimal value of each and covert to char
+    var string = data.map(function( c ) {
+        return String.fromCharCode(hexToDec(c));
+    });
+
+    return string.join('');
+};
+
+/**
  * Convert Hex to Decimal
  * 
  * @param hexval
@@ -99,7 +141,7 @@ function hexToDec( hexval ) {
  */
 function decToHex( decval ) {
     var hex = "";
-    
+
     // Only do work if decval is != 0
     if ( decval != 0 ) {
         // Log16 of value gives the largest power of 16 contained in it
