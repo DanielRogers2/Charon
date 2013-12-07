@@ -156,8 +156,6 @@ Host.prototype.updateHDDDisplay = function( ) {
             }
         }
     }
-    
-    console.log(area);
 };
 
 Host.prototype.log = function( msg, source ) {
