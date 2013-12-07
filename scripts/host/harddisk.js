@@ -30,6 +30,58 @@ function HDD( display_fn ) {
 };
 
 /**
+ * Writes a string of data to a location on the hard drive specified by track,
+ * sector, block, starting at the beginning of the block
+ * 
+ * @param track
+ *            The track to write in as a value in the range 0-this.TRACKS
+ * @param sector
+ *            The sector to write in as a value in the range [0 - this.SECTORS)
+ * @param block
+ *            The block to write in as a value in the range [0 - this.BLOCKS)
+ * @param data
+ *            The data to write, expressed as 2-digit hex values with a length
+ *            of [2 - (2 * this.BLOCK_SIZE))
+ * @return true if the write succeeds. false if the write fails (invalid write)
+ */
+HDD.prototype.write = function( track, sector, block, data ) {
+
+    // Validate write location
+    if ( track >= this.TRACKS || sector >= this.SECTORS || block >= this.BLOCKS ) {
+        // Invalid write location
+        console.log("Bad write!");
+        return false;
+    }
+    // Validate data
+    else if ( !data.length || data.length % 2 != 0
+            || data.length > this.BLOCK_SIZE ) {
+        // No data, odd number of digits, data too long or too short
+        // Therefore data is invalid
+        console.log("Bad data write!");
+        return false;
+    }
+
+    // Get write location
+    var key = '' + track + '' + sector + '' + block;
+
+    // See if data needs to be padded
+    if ( data.length < this.BLOCK_SIZE ) {
+        // Pad with data @ location
+        // Get current data
+        var cdata = sessionStorage.getItem(key);
+        // Get pad
+        var pad = cdata.slice(data.length, this.BLOCK_SIZE);
+        // Pad the data
+        data += pad;
+    }
+
+    // Perform the write
+    sessionStorage.setItem(key, data);
+
+    return true;
+};
+
+/**
  * Creates a new local store, initializes all tracks, sectors, and blocks to 0
  */
 HDD.prototype.createStorage = function( ) {
@@ -57,10 +109,10 @@ HDD.prototype.createStorage = function( ) {
  * Clears local storage
  */
 HDD.prototype.factoryReset = function( ) {
-    //Just use the HTML5 function to delete EVERYTHING
+    // Just use the HTML5 function to delete EVERYTHING
     localStorage.clear();
-    
-    //Yes a call to this would probably work just as well, but deleting + 
-    //  recreating makes more sense
+
+    // Yes a call to this would probably work just as well, but deleting +
+    // recreating makes more sense
     this.createStorage();
 };
