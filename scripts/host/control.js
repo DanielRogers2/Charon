@@ -56,9 +56,16 @@ function Host( ) {
 
     // Complete the memory display
     this.genMemoryTable();
+    
+    var hdd_displayer = function () {
+        host.updateHDDDisplay();
+    };
 
     // Get the HDD
-    this.HDD = new HDD(undefined);
+    this.HDD = new HDD(hdd_displayer);
+    
+    //display the initial state
+    this.updateHDDDisplay();
 
     // Clear the log text box.
     document.getElementById("taLog").value = "";
@@ -130,6 +137,29 @@ Host.prototype.startOS = function( btn ) {
     window.setTimeout(loadComplete, waitTime, this);
 };
 
+/**
+ * Updates the display of the harddrive
+ */
+Host.prototype.updateHDDDisplay = function( ) {
+    // Just put all of the data on the div for now, nothing fancy
+    var key = '';
+    var area = document.getElementById("divHDD");
+    area.innerHTML = '';
+
+    for ( var t = 0; t < this.HDD.TRACKS; ++t ) {
+        for ( var s = 0; s < this.HDD.SECTORS; ++s ) {
+            for ( var b = 0; b < this.HDD.BLOCKS; ++b ) {
+                // Get the key, as a string TSB
+                key = '' + t + '' + s + '' + b;
+                // Put in the div
+                area.innerHTML += key + ' | ' + this.HDD.read(t, s, b) + '<br>';
+            }
+        }
+    }
+    
+    console.log(area);
+};
+
 Host.prototype.log = function( msg, source ) {
     // Check the source.
     if ( !source ) {
@@ -168,6 +198,8 @@ Host.prototype.RESET = function( ) {
     // be reloaded from the server. If it is false or not specified, the browser
     // may reload the
     // page from its cache, which is not what we want.
+    //Drop local storage
+    sessionStorage.clear();
 };
 
 /*

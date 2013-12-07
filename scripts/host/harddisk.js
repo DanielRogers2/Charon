@@ -24,9 +24,8 @@ function HDD( display_fn ) {
     if ( !sessionStorage.getItem('000') ) {
         this.createStorage();
     }
-    else {
-        console.log("storage");
-    }
+
+    this.display = display_fn;
 };
 
 /**
@@ -130,6 +129,8 @@ HDD.prototype.createStorage = function( ) {
     for ( var b = 0; b < this.BLOCK_SIZE; ++b ) {
         storestr[b] = '00';
     }
+    
+    storestr = storestr.join('');
 
     // Generate a new store
     var key = '';
@@ -155,4 +156,5 @@ HDD.prototype.factoryReset = function( ) {
     // Yes a call to this would probably work just as well, but deleting +
     // recreating makes more sense
     this.createStorage();
+    this.display();
 };
