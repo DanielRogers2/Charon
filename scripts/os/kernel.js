@@ -503,7 +503,6 @@ Kernel.prototype.freeProcess = function( pid ) {
     if ( rindex > -1 ) {
         // Remove it from the ready queue
         this.readyQueue.q.splice(rindex, 1);
-        this.host.updateRQDisplay();
     }
 
     if ( this.activeProcess && ( pid == this.activeProcess.PID ) ) {
@@ -513,6 +512,8 @@ Kernel.prototype.freeProcess = function( pid ) {
         this.CPU.isExecuting = false;
         this.shortTermSched.decide();
     }
+    //Update display
+    this.host.updateRQDisplay();
 };
 
 /**
