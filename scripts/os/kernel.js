@@ -185,11 +185,12 @@ function Kernel( host ) {
     // TODO Implement FS
     // Set up the file system device driver
     this.trace("Loading FS");
-    //Load the driver
+    // Load the driver
     this.fsDriver = new FileSystemDeviceDriver();
-    //Set up the interrupt vector
+    this.fsDriver.driverEntry(this.HDD);
+    // Set up the interrupt vector
     this.IV[this.FILE_IO_IRQ] = function( params ) {
-        
+        kernel.fsDriver.isr(params);
     };
 
     // Loads the memory management unit
