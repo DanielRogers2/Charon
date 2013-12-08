@@ -115,46 +115,67 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
     // Enumerate the files
     this.enumerateFiles();
 
-    // Should succeed
-    console.log(this.createFile(hexToStr("DEADBEEF")));
-    // Should fail, file exists
-    console.log(this.createFile(hexToStr("DEADBEEF")));
-    // Should be the next index & successful
-    var indx = this.allocate(true);
-    console.log(indx);
-    // Should restore state of disk
-    this.free(indx, true);
+    if ( DEBUG ) {
 
-    // Should contain hexToStr(DEADBEEF) : first_data_block
-    console.log(this.file_list);
+        // Should succeed
+        console.log(this.createFile(hexToStr("DEADBEEF")));
+        // Should fail, file exists
+        console.log(this.createFile(hexToStr("DEADBEEF")));
+        // Should be the next index & successful
+        var indx = this.allocate(true);
+        console.log(indx);
+        // Should restore state of disk
+        this.free(indx, true);
 
-    this.write([ 1, 0, 0 ], strToHex("this is a really long string"
-            + " holy shit not really kindof"));
-    console.log(hexToStr(this.read([ 1, 0, 0 ])));
+        // Should contain hexToStr(DEADBEEF) : first_data_block
+        console.log(this.file_list);
 
-    this.write([ 1, 0, 0 ], strToHex("how was that exactly two blocks idk,"
-            + " oh it was a bug yeah"));
-    console.log(hexToStr(this.read([ 1, 0, 0 ])));
+        this.write([ 1, 0, 0 ], strToHex("this is a really long string"
+                + " holy shit not really kindof"));
+        console.log(hexToStr(this.read([ 1, 0, 0 ])));
 
-    // Should succeed
-    console.log(this.deleteFile(hexToStr("DEADBEEF")));
+        this.write([ 1, 0, 0 ], strToHex("how was that exactly two blocks idk,"
+                + " oh it was a bug yeah"));
+        console.log(hexToStr(this.read([ 1, 0, 0 ])));
 
-    // Should be {}
-    console.log(this.file_list);
+        // Should succeed
+        console.log(this.deleteFile(hexToStr("DEADBEEF")));
 
-    // Should succeed
-    console.log(this.createFile(hexToStr("DEADBEEF")));
-    // Should print nothing
-    console.log(hexToStr(this.read([ 1, 0, 0 ])));
+        // Should be {}
+        console.log(this.file_list);
 
-    // Should contain hexToStr(DEADBEEF) : first_data_block
-    console.log(this.file_list);
+        // Should succeed
+        console.log(this.createFile(hexToStr("DEADBEEF")));
+        // Should print nothing
+        console.log(hexToStr(this.read([ 1, 0, 0 ])));
 
-    // Should be the next index & successful
-    var indx = this.allocate(true);
-    console.log(indx);
-    // Should restore state of disk
-    this.free(indx, true);
+        // Should contain hexToStr(DEADBEEF) : first_data_block
+        console.log(this.file_list);
+
+        // Should be the next index & successful
+        var indx = this.allocate(true);
+        console.log(indx);
+        // Should restore state of disk
+        this.free(indx, true);
+
+        // Should say success
+        console.log(this.writeFile(hexToStr("DEADBEEF"), hexToStr("DEADBEEF")));
+
+        // Should fail, file not found
+        console.log(this.writeFile(hexToStr("FFFFFF"), hexToStr("DEADBEEF")));
+
+        // should come back true, DEADBEEF
+        console.log(this.readFile(hexToStr("DEADBEEF")));
+
+        // Should fail, file not found
+        console.log(this.readFile(hexToStr("FFFFFF")));
+
+        // should work
+        console.log(this.deleteFile(hexToStr("DEADBEEF")));
+
+        // Should be {}
+        console.log(this.file_list);
+    }
 
     this.status = "loaded";
 };
@@ -216,7 +237,9 @@ FileSystemDeviceDriver.prototype.createFile = function( fname ) {
     this.HDD.write(new_indx, first_indx + hex_data_indx + hex_fname + this.EOF);
 
     // Update file list
-    this.file_list[fname] = [ new_indx, data_indx ];
+    this.file_list[fname] = { };
+    this.file_list[fname].index_ptr = new_indx;
+    this.file_list[fname].data_ptr = data_indx;
 
     // Update the MBR to point to this as the first directory
     mbr_data = mbr_data.replace(first_indx, hex_nindx);
@@ -244,7 +267,7 @@ FileSystemDeviceDriver.prototype.writeFile = function( fname, data ) {
     }
 
     // Then get the address of the file's data blocks
-    var w_addr = this.file_list[fname][1];
+    var w_addr = this.file_list[fname].data_ptr;
     // Convert data to hex
     var hex_data = strToHex(data);
 
@@ -282,7 +305,7 @@ FileSystemDeviceDriver.prototype.readFile = function( fname ) {
     }
 
     // Get the pointer to the file data, an easy lookup
-    var dstart = this.file_list[fname];
+    var dstart = this.file_list[fname].data_ptr;
 
     // Read the data into data
     res.data = this.read(dstart);
@@ -310,9 +333,9 @@ FileSystemDeviceDriver.prototype.deleteFile = function( fname ) {
     // Traverse the file's data blocks, and free each one
     // Files were enumerated by fileExists
     // Get the index of the file
-    var findex = this.file_list[fname][0];
+    var findex = this.file_list[fname].index_ptr;
     // Get the index of the first data block
-    var index_set = this.file_list[fname][1];
+    var index_set = this.file_list[fname].data_ptr;
 
     // Free the data blocks
     this.del(index_set);
@@ -574,7 +597,9 @@ FileSystemDeviceDriver.prototype.enumerateFiles = function( ) {
                 cur_data.slice(this.FILEDATA_PNTR_OFFSET,
                         this.FILEDATA_PNTR_OFFSET + this.PNTR_SIZE)).split('');
 
-        this.file_list[hexToStr(cur_name)] = [ indx_set, fdata_ptr ];
+        this.file_list[hexToStr(cur_name)] = { };
+        this.file_list[hexToStr(cur_name)].index_ptr = indx_set;
+        this.file_list[hexToStr(cur_name)].data_ptr = fdata_ptr;
 
         // update cur_indx
         cur_indx = cur_data.slice(this.FILENEXT_OFFSET, this.FILENEXT_OFFSET
