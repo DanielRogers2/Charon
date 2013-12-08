@@ -7,6 +7,18 @@ FileSystemDeviceDriver.prototype = new DeviceDriver;
 /**
  * Creates a new file system driver
  * 
+ * STORAGE NOTES:
+ * 
+ * MBR contains the following, each separated by byte 00: secret_string, pointer
+ * to first index, pointer to first free index block, pointer to first free data
+ * block.
+ * 
+ * Each INDEX block contains the following, no separation:
+ * pointer_to_next_index, pointer_to_file_data, file_name, EOF
+ * 
+ * Each DATA blaock contains the following, no separation: pointer_to_next_data,
+ * file_data, EOF
+ * 
  * @returns {FileSystemDeviceDriver}
  */
 function FileSystemDeviceDriver( ) {
@@ -26,12 +38,15 @@ function FileSystemDeviceDriver( ) {
     this.DATA_START = [ 1, 0, 0 ];
 
     // MBR Initializer
-    this.MBR_INITIAL = this.MBR_HEADER + '00'
+    this.MBR_INITIAL = this.MBR_HEADER + '00' + this.INVALID_PNTR + '00'
             + strToHex(this.FS_INDEX_START.join('')) + '00'
             + strToHex(this.DATA_START.join(''));
 
+    // Offset into MBR of pointer to first index
+    this.FIRST_INDEX_OFFSET = this.MBR_HEADER.length + 2;
+
     // Offset into MBR of head pointer to free file indexes
-    this.FS_FREE_OFFSET = this.MBR_HEADER.length + 2;
+    this.FS_FREE_OFFSET = this.FIRST_INDEX_OFFSET + this.PNTR_SIZE + 2;
 
     // data @ FS_FREE_OFFSET is TSB value, so do that + a 00 space
     // For a total of 8 values (6 for TSB + 2 for space)
@@ -40,6 +55,24 @@ function FileSystemDeviceDriver( ) {
 
     // EOF marker, literal value NOT A STRING
     this.EOF = '26';
+
+    // Maximum number of characters in a file name
+    this.MAX_FNAME_SIZE = undefined;
+
+    // Offset where filename starts
+    this.FNAME_START_OFFSET = 2 * this.PNTR_SIZE;
+
+    // Offset where pointer to next index block starts
+    this.FILENEXT_OFFSET = 0;
+
+    // Offset where pointer to file data starts
+    this.FILEDATA_PNTR_OFFSET = this.PNTR_SIZE;
+
+    // Offset where pointer to next data block starts
+    this.DATANEXT_OFFSET = 0;
+
+    // Offset where file data in block starts
+    this.DATA_OFFSET = this.PNTR_SIZE;
 
     // Hard disk to write to
     this.HDD = undefined;
@@ -100,6 +133,93 @@ FileSystemDeviceDriver.prototype.format = function( ) {
 };
 
 /**
+ * Creates a new file with the specified name
+ * 
+ * @param fname
+ *            The file name to create
+ * @return message A message indicating creation state. One of "success",
+ *         "failed, no space", "failed, file exists", "failed, file name too
+ *         long"
+ */
+FileSystemDeviceDriver.prototype.create = function( fname ) {
+    // convert to hex
+    fname = strToHex(fname);
+
+    // Check valid file name
+    if ( fname.length > this.MAX_FNAME_SIZE ) {
+        return "failed, file name too long";
+    }
+
+    // Get the data at the MBR, for lookup
+    var mbr_data = this.HDD.read(this.MBR);
+
+    // Get the first index
+    var first_indx = mbr_data.slice(this.FIRST_INDEX_OFFSET,
+            this.FIRST_INDEX_OFFSET + this.PNTR_SIZE);
+    var cur_indx = first_indx;
+
+    // Get the index data
+    var indx_set = hexToStr(cur_indx);
+    var cur_name, cur_data;
+
+    // Traverse list of directory entries
+    while ( cur_indx != this.INVALID_PNTR ) {
+        // Get the data
+        cur_data = this.HDD.read(indx_set);
+        // Get the file name, meaning everything past the pointer up to the EOF
+        cur_name = cur_data.slice(this.FNAME_START_OFFSET, cur_data
+                .indexOf(this.EOF));
+
+        if ( fname == cur_name ) {
+            return "failed, file exists";
+        }
+
+        // update cur_indx
+        cur_indx = cur_data.slice(this.FILENEXT_OFFSET, this.FILENEXT_OFFSET
+                + this.PNTR_SIZE);
+        indx_set = hexToStr(cur_indx);
+    }
+
+    // Now get an index
+    var new_indx = this.allocate(true);
+    var hex_nindx = strToHex(new_indx.join(''));
+
+    // Check if we could allocate a block of space
+    if ( hex_nindx == this.INVALID_PNTR ) {
+        return "failed, no space";
+    }
+
+    // Allocate 1 block of data
+    var data_indx = this.allocate(false);
+    data_indx = strToHex(data_indx.join(''));
+
+    // Check if we could allocate a block of space
+    if ( data_indx == this.INVALID_PNTR ) {
+
+        // Free the index block
+        this.free(new_indx, true);
+
+        return "failed, no space";
+    }
+
+    // Everything is okay at this point, write pointer to free data block
+    // + file name followed by EOF
+    // Store first_index, so we preserve the linked list, with this as the new
+    // head
+    this.HDD.write(new_indx, first_indx + data_indx + fname + this.EOF);
+
+    // MBR DATA HAS CHANGED, REFETCH FROM BACKING STORE
+    // oh god bugs
+    mbr_data = this.HDD.read(this.MBR);
+    // Update the MBR to point to this as the first directory
+    mbr_data = mbr_data.replace(first_indx, hex_nindx);
+    // Write the data to update the mbr
+    this.HDD.write(this.MBR, mbr_data);
+
+    return "success";
+};
+
+/**
  * Registers a free block in the hard drive
  * 
  * @param addr
@@ -110,7 +230,7 @@ FileSystemDeviceDriver.prototype.format = function( ) {
 FileSystemDeviceDriver.prototype.free = function( addr, index ) {
     // Get the data at the MBR, for lookup
     var mbr_data = this.HDD.read(this.MBR);
-    var hex_addr = strToHex(addr.join());
+    var hex_addr = strToHex(addr.join(''));
 
     // Pointer to the next free block
     var free_next;
@@ -171,13 +291,15 @@ FileSystemDeviceDriver.prototype.allocate = function( index ) {
         new_addr = hexToStr(alloc).split('');
         // Get the data in the block, and the address of the next block
         // located as the first 3 bytes
-        free_next = this.HDD.read(new_addr).slice(this.PNTR_SIZE);
+        free_next = this.HDD.read(new_addr).slice(0, this.PNTR_SIZE);
         // Update the mbr
-        mbr_data.replace(alloc, free_next);
+        mbr_data = mbr_data.replace(alloc, free_next);
         // Write the data to update the mbr
         this.HDD.write(this.MBR, mbr_data);
         // Update the pointer data at alloc to be INVALID_PNTR
-        this.HDD.write(new_addr, this.INVALID_PNTR);
+        this.HDD.write(new_addr, this.INVALID_PNTR + this.INVALID_PNTR
+                + this.EOF);
+
     }
 
     return hexToStr(alloc).split('');
@@ -199,6 +321,21 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
     if ( secret != this.MBR_HEADER ) {
         this.format();
     }
+
+    // Set maximum number of characters in a file name
+    // Need enough room for an EOF + two pointers
+    this.MAX_FNAME_SIZE = this.HDD.BLOCK_SIZE - this.EOF.length
+            - this.FNAME_START_OFFSET;
+
+    /*
+     * console.log(this.create(hexToStr("DEADBEEF")));
+     * 
+     * var indx = this.allocate(true);
+     * 
+     * console.log(indx);
+     * 
+     * this.free(indx, true);
+     */
 
     this.status = "loaded";
 };
