@@ -16,7 +16,7 @@ FileSystemDeviceDriver.prototype = new DeviceDriver;
  * Each INDEX block contains the following, no separation:
  * pointer_to_next_index, pointer_to_file_data, file_name, EOF
  * 
- * Each DATA blaock contains the following, no separation: pointer_to_next_data,
+ * Each DATA block contains the following, no separation: pointer_to_next_data,
  * file_data, EOF
  * 
  * @returns {FileSystemDeviceDriver}
@@ -193,7 +193,7 @@ FileSystemDeviceDriver.prototype.createFile = function( fname ) {
     // Allocate 1 block of data
     var data_indx = this.allocate(false);
     var hex_data_indx = strToHex(data_indx.join(''));
-        
+
     // Check if we could allocate a block of space
     if ( hex_data_indx == this.INVALID_PNTR ) {
 
@@ -227,6 +227,41 @@ FileSystemDeviceDriver.prototype.createFile = function( fname ) {
 };
 
 /**
+ * Reads a file
+ * 
+ * @param fname
+ *            The file to read from
+ * 
+ * @return a map containing {success: <true|false>, data: <filedata|message>} A
+ *         status of true indicates a successful read, and data will be the hex
+ *         data in the file. A status of false is a bad read, and data will be
+ *         the error message.
+ */
+FileSystemDeviceDriver.prototype.readFile = function( fname ) {
+    var res =
+    {
+        success : false,
+        data : 'File not found'
+    };
+
+    // Check if the file exists
+    if ( !this.fileExists(fname) ) {
+        return res;
+    }
+
+    // Get the pointer to the file data, an easy lookup
+    var dstart = this.file_list[fname];
+
+    // Read the data into data
+    res.data = this.read(dstart);
+
+    // Flag OK
+    res.success = true;
+
+    return res;
+};
+
+/**
  * Deletes a file
  * 
  * @param fname
@@ -246,24 +281,9 @@ FileSystemDeviceDriver.prototype.deleteFile = function( fname ) {
     var findex = this.file_list[fname][0];
     // Get the index of the first data block
     var index_set = this.file_list[fname][1];
-    var cur_index, cur_data;
 
-    // Convert for checking
-    cur_index = strToHex(index_set.join(''));
-
-    while ( cur_index != this.INVALID_PNTR ) {
-        // Get the data
-        cur_data = this.HDD.read(index_set);
-
-        // Extract pointer to next
-        cur_index = cur_data.slice(this.DATANEXT_OFFSET, this.PNTR_SIZE);
-
-        // Free the current non-index (data) block
-        this.free(index_set, false);
-
-        // Get the next set of track, sector, block
-        index_set = hexToStr(cur_index).split('');
-    }
+    // Free the data blocks
+    this.del(index_set);
 
     // Get the pointer to the next directory entry
     var nxt_dir = this.HDD.read(findex).slice(this.FILENEXT_OFFSET,
@@ -275,8 +295,6 @@ FileSystemDeviceDriver.prototype.deleteFile = function( fname ) {
     mbr_data = mbr_data.replace(strToHex(findex.join('')), nxt_dir);
     // Write it to the hard drive
     this.HDD.write(this.MBR, mbr_data);
-
-    // cry
 
     // Free the index block
     this.free(findex, true);
@@ -319,31 +337,6 @@ FileSystemDeviceDriver.prototype.read = function( addr ) {
     }
 
     return data;
-};
-
-/**
- * Gets the index of EOF from a hex string
- * 
- * @param hex
- *            The hex string to look for EOF in
- * @return -1 if not found, otherwise the index of the string
- * 
- */
-FileSystemDeviceDriver.prototype.EOFIndex = function( hex ) {
-    // Convert data into 2byte sets
-    var getbytes = function( hex ) {
-        var data = [ ];
-        hex = hex.split('');
-        for ( var i = 0; i < hex.length; i += 2 ) {
-            data[i / 2] = hex.slice(i, i + 2).join('');
-        }
-
-        return data;
-    };
-    
-    // Multiply by two, since outside is looking at single characters and not
-    // bytes
-    return 2 * getbytes(hex).indexOf(this.EOF);
 };
 
 /**
@@ -453,6 +446,34 @@ FileSystemDeviceDriver.prototype.write = function( addr, data ) {
 };
 
 /**
+ * De-allocates a contiguous set of data blocks
+ * 
+ * @param addr
+ *            The start address
+ */
+FileSystemDeviceDriver.prototype.del = function( addr ) {
+    var index_set = addr;
+    var cur_index, cur_data;
+
+    // Convert for checking
+    cur_index = strToHex(index_set.join(''));
+
+    while ( cur_index != this.INVALID_PNTR ) {
+        // Get the data
+        cur_data = this.HDD.read(index_set);
+
+        // Extract pointer to next
+        cur_index = cur_data.slice(this.DATANEXT_OFFSET, this.PNTR_SIZE);
+
+        // Free the current non-index (data) block
+        this.free(index_set, false);
+
+        // Get the next set of track, sector, block
+        index_set = hexToStr(cur_index).split('');
+    }
+};
+
+/**
  * Checks if a file exists
  * 
  * @param fname
@@ -464,6 +485,31 @@ FileSystemDeviceDriver.prototype.fileExists = function( fname ) {
         this.enumerateFiles();
     }
     return fname in this.file_list;
+};
+
+/**
+ * Gets the index of EOF from a hex string
+ * 
+ * @param hex
+ *            The hex string to look for EOF in
+ * @return -1 if not found, otherwise the index of the string
+ * 
+ */
+FileSystemDeviceDriver.prototype.EOFIndex = function( hex ) {
+    // Convert data into 2byte sets
+    var getbytes = function( hex ) {
+        var data = [ ];
+        hex = hex.split('');
+        for ( var i = 0; i < hex.length; i += 2 ) {
+            data[i / 2] = hex.slice(i, i + 2).join('');
+        }
+
+        return data;
+    };
+
+    // Multiply by two, since outside is looking at single characters and not
+    // bytes
+    return 2 * getbytes(hex).indexOf(this.EOF);
 };
 
 /**
