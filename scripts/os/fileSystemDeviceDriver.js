@@ -272,6 +272,40 @@ FileSystemDeviceDriver.prototype.deleteFile = function( fname ) {
 };
 
 /**
+ * Reads contiguous blocks of data starting at an address
+ * 
+ * @param addr
+ *            The start address to read from
+ * @return <hexdata>
+ */
+FileSystemDeviceDriver.prototype.read = function( addr ) {
+    var data = '';
+    // Go through all blocks and read until EOF is encountered
+
+    var index_set = addr;
+    var cur_index, cur_data;
+
+    // Convert for checking
+    cur_index = strToHex(index_set.join(''));
+
+    while ( cur_index != this.INVALID_PNTR ) {
+        // Get the data
+        cur_data = this.HDD.read(index_set);
+
+        // Extract pointer to next
+        cur_index = cur_data.slice(this.DATANEXT_OFFSET, this.PNTR_SIZE);
+
+        // Read the file data, up to EOF
+        data += cur_data.slice(this.DATA_START, cur_data.indexOf(this.EOF));
+
+        // Get the next set of track, sector, block
+        index_set = hexToStr(cur_index).split('');
+    }
+
+    return data;
+};
+
+/**
  * Checks if a file exists
  * 
  * @param fname
