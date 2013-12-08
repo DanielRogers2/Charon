@@ -95,12 +95,6 @@ function FileSystemDeviceDriver( ) {
 FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
     // set the HDD
     this.HDD = HDD;
-    // See if it needs to be formated
-    var MBR_DATA = this.HDD.read(this.MBR);
-    var secret = MBR_DATA.slice(0, this.MBR_HEADER.length);
-    if ( secret != this.MBR_HEADER ) {
-        this.format();
-    }
 
     // Set maximum number of characters in a file name
     // Need enough room for an EOF + two pointers
@@ -540,6 +534,21 @@ FileSystemDeviceDriver.prototype.fileExists = function( fname ) {
         this.enumerateFiles();
     }
     return fname in this.file_list;
+};
+
+/**
+ * Checks if the drive is formatted (probably)
+ * 
+ * @return true if the fSDD thinks the drive is formatted
+ */
+FileSystemDeviceDriver.prototype.isFormatted = function( ) {
+
+    //Get MBR data
+    var MBR_DATA = this.HDD.read(this.MBR);
+    //Look for secret string
+    var secret = MBR_DATA.slice(0, this.MBR_HEADER.length);
+
+    return secret != this.MBR_HEADER;
 };
 
 /**
