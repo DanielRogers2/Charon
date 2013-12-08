@@ -106,8 +106,10 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
     this.DATA_PER_BLOCK = this.HDD.BLOCK_SIZE * 2 - this.EOF.length
             - this.DATA_OFFSET;
 
-    // Enumerate the files
-    this.enumerateFiles();
+    if ( this.isFormatted() ) {
+        // Enumerate the files
+        this.enumerateFiles();
+    }
 
     if ( DEBUG ) {
 
@@ -552,7 +554,7 @@ FileSystemDeviceDriver.prototype.isFormatted = function( ) {
     // Look for secret string
     var secret = MBR_DATA.slice(0, this.MBR_HEADER.length);
 
-    return secret != this.MBR_HEADER;
+    return secret == this.MBR_HEADER;
 };
 
 /**
