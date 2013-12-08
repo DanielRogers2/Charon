@@ -46,26 +46,6 @@ function FileSystemDeviceDriver( ) {
 };
 
 /**
- * Handles read/write requests for the file system. If a write fails, the driver
- * will return the drive to the state it was in prior to the write attempt.
- * 
- * @param params
- *            A list of parameters which must have the following: [filename,
- *            mode (r ^ w), (if mode == w) buffer]. Buffer must be an array. If
- *            mode is w, then buffer will be written to the file. If file:
- *            filename, does not exist, it will be created.
- * @return A map containing {status : "pass" | "failure: <message>", data : []}.
- *         The failure message will be one of the following: NO ROOM (if no more
- *         room on disk), NO SUCH FILE if a read request is specified for a file
- *         that does not exist. If a read request is specified, data will
- *         contain the data read. For write requests, data will be the data
- *         successfully written to disk.
- */
-FileSystemDeviceDriver.prototype.isr = function( params ) {
-
-};
-
-/**
  * Formats the hard drive
  * 
  */

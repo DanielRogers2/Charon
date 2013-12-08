@@ -41,8 +41,6 @@ function Kernel( host ) {
     this.CPU_TIMER_IRQ = host.CPU.TIMER_IRQ;
     // Handles context switches
     this.CTXT_SWITCH_IRQ = 8;
-    // Handles file reading/writing
-    this.FILE_IO_IRQ = 9;
 
     // Canvases for drawing
     this.CONSOLE_CID = 0;
@@ -188,10 +186,6 @@ function Kernel( host ) {
     // Load the driver
     this.fsDriver = new FileSystemDeviceDriver();
     this.fsDriver.driverEntry(this.HDD);
-    // Set up the interrupt vector
-    this.IV[this.FILE_IO_IRQ] = function( params ) {
-        kernel.fsDriver.isr(params);
-    };
 
     // Loads the memory management unit
     this.trace("Loading MMU");
