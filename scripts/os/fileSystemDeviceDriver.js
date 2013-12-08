@@ -769,4 +769,7 @@ FileSystemDeviceDriver.prototype.format = function( ) {
     tag_blocks(this.DATA_START[0], this.DATA_START[1], this.DATA_START[2],
             this.HDD.TRACKS);
 
+    // Clear the file list!!!!
+    this.file_list = { };
+
 };
