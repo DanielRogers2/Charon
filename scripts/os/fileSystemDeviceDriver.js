@@ -227,6 +227,38 @@ FileSystemDeviceDriver.prototype.createFile = function( fname ) {
 };
 
 /**
+ * Writes to a file
+ * 
+ * @param fname
+ *            The file to write to
+ * @param data
+ *            The string data to write
+ * 
+ * @return A status message, one of: "success", "failed, no space", "failed, no
+ *         such file"
+ */
+FileSystemDeviceDriver.prototype.writeFile = function( fname, data ) {
+    // First check if there's a file by that name
+    if ( !this.fileExists(fname) ) {
+        return "failed, no such file";
+    }
+
+    // Then get the address of the file's data blocks
+    var w_addr = this.file_list[fname][1];
+    // Convert data to hex
+    var hex_data = strToHex(data);
+
+    // Then do the write
+    var w_success = this.write(w_addr, hex_data);
+
+    if ( !w_success ) {
+        return "failed, no space";
+    }
+
+    return "success";
+};
+
+/**
  * Reads a file
  * 
  * @param fname
