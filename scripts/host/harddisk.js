@@ -62,6 +62,7 @@ HDD.prototype.write = function( addr, data ) {
         // No data, odd number of digits, data too long or too short
         // Therefore data is invalid
         console.log("Bad data write!");
+        console.log(data);
         return false;
     }
 
@@ -122,6 +123,7 @@ HDD.prototype.read = function( addr ) {
 HDD.prototype.validateLocation = function( track, sector, block ) {
     if ( track >= this.TRACKS || sector >= this.SECTORS || block >= this.BLOCKS ) {
         // Invalid write location
+        console.log([ track, sector, block ]);
         console.log("Bad location!");
         return false;
     }
