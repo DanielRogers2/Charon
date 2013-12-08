@@ -111,6 +111,10 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
 
     if ( DEBUG ) {
 
+        if ( !this.isFormatted() ) {
+            this.format();
+        }
+
         // Should succeed
         console.log(this.createFile(hexToStr("DEADBEEF")));
         // Should fail, file exists
@@ -543,9 +547,9 @@ FileSystemDeviceDriver.prototype.fileExists = function( fname ) {
  */
 FileSystemDeviceDriver.prototype.isFormatted = function( ) {
 
-    //Get MBR data
+    // Get MBR data
     var MBR_DATA = this.HDD.read(this.MBR);
-    //Look for secret string
+    // Look for secret string
     var secret = MBR_DATA.slice(0, this.MBR_HEADER.length);
 
     return secret != this.MBR_HEADER;
