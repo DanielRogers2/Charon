@@ -106,16 +106,14 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
     this.DATA_PER_BLOCK = this.HDD.BLOCK_SIZE * 2 - this.EOF.length
             - this.DATA_OFFSET;
 
-    if ( this.isFormatted() ) {
-        // Enumerate the files
-        this.enumerateFiles();
+    if ( !this.isFormatted() ) {
+        this.format();
     }
 
-    if ( DEBUG ) {
+    // Enumerate the files
+    this.enumerateFiles();
 
-        if ( !this.isFormatted() ) {
-            this.format();
-        }
+    if ( DEBUG ) {
 
         // Should succeed
         console.log(this.createFile(hexToStr("DEADBEEF")));
