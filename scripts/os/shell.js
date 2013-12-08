@@ -478,6 +478,118 @@ function Shell( kernel ) {
     this.commandList[this.commandList.length] = sc;
 
     /*
+     * Create File
+     */
+    sc = new ShellCommand();
+    sc.command = 'create';
+    sc.description = ' <filename> - make a new file';
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
+            var fname = args[0];
+            // try to read
+            var res = shell.kernel.fsDriver.createFile(fname);
+            // Tell them what happened
+            shell.stdOut.putText(res);
+
+        }
+        else {
+            shell.stdOut.putText("Please supply a filename");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Read File
+     */
+    sc = new ShellCommand();
+    sc.command = 'read';
+    sc.description = ' <filename> - read the contents of a file';
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
+            var fname = args[0];
+            // try to read
+            var res = shell.kernel.fsDriver.readFile(fname);
+
+            if ( res.success ) {
+                // Show data
+                shell.stdOut.putText(hexToStr(res.data));
+            }
+            else {
+                // Show error
+                shell.stdOut.putText("Failure: " + res.data);
+            }
+        }
+        else {
+            shell.stdOut.putText("Please supply a filename");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Write to File
+     */
+    sc = new ShellCommand();
+    sc.command = 'write';
+    sc.description = ' <filename> data - write data to file';
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
+            // Get the file name
+            var fname = args[0];
+            var data;
+
+            // Get the data
+            if ( args.length > 1 ) {
+                data = args.slice(1).join(' ');
+            }
+            else {
+                data = '';
+            }
+
+            // try to write
+            var res = shell.kernel.fsDriver.writeFile(fname, data);
+
+            // Show result message
+            shell.stdOut.putText(res);
+        }
+        else {
+            shell.stdOut.putText("Please supply a filename");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Delete File
+     */
+    sc = new ShellCommand();
+    sc.command = 'delete';
+    sc.description = ' <filename> - delete a file from the disk';
+    sc.action = function( args ) {
+        if ( args.length > 0 ) {
+            var fname = args[0];
+            // try to read
+            var res = shell.kernel.fsDriver.deleteFile(fname);
+            // Tell them what happened
+            shell.stdOut.putText(res);
+
+        }
+        else {
+            shell.stdOut.putText("Please supply a filename");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Format Disk
+     */
+    sc = new ShellCommand();
+    sc.command = 'format';
+    sc.description = 'formats the disk';
+    sc.action = function( args ) {
+        shell.kernel.fsDriver.format();
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
      * crash
      */
     sc = new ShellCommand();
