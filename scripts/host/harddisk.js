@@ -7,7 +7,9 @@
  * 
  * @param display_fn
  *            A vm-specified function to call with display updates. The function
- *            is expected to look at the HDD internals and figure out what to do
+ *            is expected to look at the HDD internals and figure out what to
+ *            do. The function will be called with t,s,b indicating what was
+ *            updated.
  */
 function HDD( display_fn ) {
     // Total number of tracks on the disk
@@ -32,18 +34,21 @@ function HDD( display_fn ) {
  * Writes a string of data to a location on the hard drive specified by track,
  * sector, block, starting at the beginning of the block
  * 
- * @param track
- *            The track to write in as a value in the range 0-this.TRACKS
- * @param sector
- *            The sector to write in as a value in the range [0 - this.SECTORS)
- * @param block
- *            The block to write in as a value in the range [0 - this.BLOCKS)
+ * @param addr:
+ *            and array of[ track: The track to read in as a value in the range
+ *            0-this.TRACKS, sector: The sector to read in as a value in the
+ *            range [0 - this.SECTORS), block: The block to read as a value in
+ *            the range [0 - this.BLOCKS)]
  * @param data
  *            The data to write, expressed as 2-digit hex values with a length
  *            of [2 - (2 * this.BLOCK_SIZE))
  * @return true if the write succeeds. false if the write fails (invalid write)
  */
-HDD.prototype.write = function( track, sector, block, data ) {
+HDD.prototype.write = function( addr, data ) {
+
+    var track = addr[0];
+    var sector = addr[1];
+    var block = addr[2];
 
     // Validate write location
     if ( !this.validateLocation(track, sector, block) ) {
@@ -53,7 +58,7 @@ HDD.prototype.write = function( track, sector, block, data ) {
     }
     // Validate data
     else if ( !data.length || data.length % 2 != 0
-            || data.length > this.BLOCK_SIZE ) {
+            || data.length > ( 2 * this.BLOCK_SIZE ) ) {
         // No data, odd number of digits, data too long or too short
         // Therefore data is invalid
         console.log("Bad data write!");
@@ -64,19 +69,19 @@ HDD.prototype.write = function( track, sector, block, data ) {
     var key = '' + track + '' + sector + '' + block;
 
     // See if data needs to be padded
-    if ( data.length < this.BLOCK_SIZE ) {
+    if ( data.length < 2 * this.BLOCK_SIZE ) {
         // Pad with data @ location
         // Get current data
         var cdata = sessionStorage.getItem(key);
         // Get pad
-        var pad = cdata.slice(data.length, this.BLOCK_SIZE);
+        var pad = cdata.slice(data.length, 2 * this.BLOCK_SIZE);
         // Pad the data
         data += pad;
     }
 
     // Perform the write
     sessionStorage.setItem(key, data);
-    this.display();
+    this.display(track, sector, block);
 
     return true;
 };
@@ -84,17 +89,20 @@ HDD.prototype.write = function( track, sector, block, data ) {
 /**
  * Reads data from a location specified by track, sector, block
  * 
- * @param track
- *            The track to read in as a value in the range 0-this.TRACKS
- * @param sector
- *            The sector to read in as a value in the range [0 - this.SECTORS)
- * @param block
- *            The block to read as a value in the range [0 - this.BLOCKS)
+ * @param addr:
+ *            and array of[ track: The track to read in as a value in the range
+ *            0-this.TRACKS, sector: The sector to read in as a value in the
+ *            range [0 - this.SECTORS), block: The block to read as a value in
+ *            the range [0 - this.BLOCKS)]
  * 
  * @return The data at location if it's a valid location, else ''
  * 
  */
-HDD.prototype.read = function( track, sector, block ) {
+HDD.prototype.read = function( addr ) {
+    var track = addr[0];
+    var sector = addr[1];
+    var block = addr[2];
+
     if ( !this.validateLocation(track, sector, block) ) {
         // Invalid write location
         console.log("Bad read!");
@@ -130,7 +138,7 @@ HDD.prototype.createStorage = function( ) {
     for ( var b = 0; b < this.BLOCK_SIZE; ++b ) {
         storestr[b] = '00';
     }
-    
+
     storestr = storestr.join('');
 
     // Generate a new store
@@ -142,6 +150,8 @@ HDD.prototype.createStorage = function( ) {
                 key = '' + t + '' + s + '' + b;
                 // Write the store string at location
                 sessionStorage.setItem(key, storestr);
+                if ( this.display )
+                    this.display(t, s, b);
             }
         }
     }
@@ -157,5 +167,4 @@ HDD.prototype.factoryReset = function( ) {
     // Yes a call to this would probably work just as well, but deleting +
     // recreating makes more sense
     this.createStorage();
-    this.display();
 };

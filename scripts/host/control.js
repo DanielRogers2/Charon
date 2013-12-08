@@ -56,16 +56,16 @@ function Host( ) {
 
     // Complete the memory display
     this.genMemoryTable();
-    
-    var hdd_displayer = function () {
-        host.updateHDDDisplay();
+
+    var hdd_displayer = function( t, s, b ) {
+        host.updateHDDDisplay(t, s, b);
     };
 
     // Get the HDD
     this.HDD = new HDD(hdd_displayer);
-    
-    //display the initial state
-    this.updateHDDDisplay();
+
+    // display the initial state
+    this.initHDDDisplay();
 
     // Clear the log text box.
     document.getElementById("taLog").value = "";
@@ -140,7 +140,32 @@ Host.prototype.startOS = function( btn ) {
 /**
  * Updates the display of the harddrive
  */
-Host.prototype.updateHDDDisplay = function( ) {
+Host.prototype.updateHDDDisplay = function( t, s, b ) {
+    // Just put all of the data on the div for now, nothing fancy
+    var key = [ t, s, b ].join('');
+    var area = document.getElementById("divHDD");
+
+    // Each block has 2 * BLOCK_SIZE hex characters in it
+    // With an additional 4 characters for <br>, 3 for key, and 3 for ' | '
+    // on the line
+    var linesz = ( 2 * this.HDD.BLOCK_SIZE + 4 + 3 + 3 );
+    // Get the start of key data,
+    // There are 8 sectors per track, 8 blocks per sector
+    var indx = 8 * 8 * t * linesz + 8 * s * linesz + b * linesz;
+
+    // Data to write
+    var update = key + ' | ' + this.HDD.read([ t, s, b ]) + '<br>';
+
+    // First part of the data, before the update
+    var d1 = area.innerHTML.slice(0, indx);
+    // Data after the update
+    var d2 = area.innerHTML.slice(indx + linesz);
+    // update the div
+    area.innerHTML = d1.concat(update).concat(d2);
+};
+
+// Initializes the HDDDisplay
+Host.prototype.initHDDDisplay = function( ) {
     // Just put all of the data on the div for now, nothing fancy
     var key = '';
     var area = document.getElementById("divHDD");
@@ -152,7 +177,8 @@ Host.prototype.updateHDDDisplay = function( ) {
                 // Get the key, as a string TSB
                 key = '' + t + '' + s + '' + b;
                 // Put in the div
-                area.innerHTML += key + ' | ' + this.HDD.read(t, s, b) + '<br>';
+                area.innerHTML += key + ' | ' + this.HDD.read([ t, s, b ])
+                        + '<br>';
             }
         }
     }
@@ -196,7 +222,7 @@ Host.prototype.RESET = function( ) {
     // be reloaded from the server. If it is false or not specified, the browser
     // may reload the
     // page from its cache, which is not what we want.
-    //Drop local storage
+    // Drop local storage
     sessionStorage.clear();
 };
 
