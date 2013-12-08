@@ -50,4 +50,15 @@ STS.prototype.decide = function( ) {
         // Set the timer to next decision
         this.updateTimer(this.quantum);
     }
+    else if ( this.mode === 'FCFS' ) {
+        // Never cause a timer trigger
+        this.updateTimer(-1);
+        if ( this.trace )
+            this.trace("FCFS Switch");
+
+        // Do the switch
+        if ( this.readyQueue.getSize() > 0 ) {
+            this.contextSwitchHandler(this.readyQueue.dequeue());
+        }
+    }
 };
