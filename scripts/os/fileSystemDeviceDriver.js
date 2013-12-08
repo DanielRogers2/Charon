@@ -74,6 +74,10 @@ function FileSystemDeviceDriver( ) {
     // Offset where file data in block starts
     this.DATA_OFFSET = this.PNTR_SIZE;
 
+    // Enumerated list of files, containing a map of filename :
+    // [index_of_filename, index_of_filedata]
+    this.file_list = undefined;
+
     // Hard disk to write to
     this.HDD = undefined;
 };
@@ -100,15 +104,39 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
     this.MAX_FNAME_SIZE = this.HDD.BLOCK_SIZE - this.EOF.length
             - this.FNAME_START_OFFSET;
 
-    /*
-     * console.log(this.create(hexToStr("DEADBEEF")));
-     * 
-     * var indx = this.allocate(true);
-     * 
-     * console.log(indx);
-     * 
-     * this.free(indx, true);
-     */
+    // Enumerate the files
+    this.enumerateFiles();
+
+    // Should succeed
+    console.log(this.createFile(hexToStr("DEADBEEF")));
+    // Should fail, file exists
+    console.log(this.createFile(hexToStr("DEADBEEF")));
+    // Should be the next index & successful
+    var indx = this.allocate(true);
+    console.log(indx);
+    // Should restore state of disk
+    this.free(indx, true);
+
+    // Should contain hexToStr(DEADBEEF) : first_data_block
+    console.log(this.file_list);
+
+    // Should succeed
+    console.log(this.deleteFile(hexToStr("DEADBEEF")));
+
+    // Should be {}
+    console.log(this.file_list);
+
+    // Should succeed
+    console.log(this.createFile(hexToStr("DEADBEEF")));
+
+    // Should contain hexToStr(DEADBEEF) : first_data_block
+    console.log(this.file_list);
+
+    // Should be the next index & successful
+    var indx = this.allocate(true);
+    console.log(indx);
+    // Should restore state of disk
+    this.free(indx, true);
 
     this.status = "loaded";
 };
@@ -122,43 +150,17 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
  *         "failed, no space", "failed, file exists", "failed, file name too
  *         long"
  */
-FileSystemDeviceDriver.prototype.create = function( fname ) {
+FileSystemDeviceDriver.prototype.createFile = function( fname ) {
     // convert to hex
-    fname = strToHex(fname);
+    var hex_fname = strToHex(fname);
 
     // Check valid file name
-    if ( fname.length > this.MAX_FNAME_SIZE ) {
+    if ( hex_fname.length > this.MAX_FNAME_SIZE ) {
         return "failed, file name too long";
     }
 
-    // Get the data at the MBR, for lookup
-    var mbr_data = this.HDD.read(this.MBR);
-
-    // Get the first index
-    var first_indx = mbr_data.slice(this.FIRST_INDEX_OFFSET,
-            this.FIRST_INDEX_OFFSET + this.PNTR_SIZE);
-    var cur_indx = first_indx;
-
-    // Get the index data
-    var indx_set = hexToStr(cur_indx);
-    var cur_name, cur_data;
-
-    // Traverse list of directory entries
-    while ( cur_indx != this.INVALID_PNTR ) {
-        // Get the data
-        cur_data = this.HDD.read(indx_set);
-        // Get the file name, meaning everything past the pointer up to the EOF
-        cur_name = cur_data.slice(this.FNAME_START_OFFSET, cur_data
-                .indexOf(this.EOF));
-
-        if ( fname == cur_name ) {
-            return "failed, file exists";
-        }
-
-        // update cur_indx
-        cur_indx = cur_data.slice(this.FILENEXT_OFFSET, this.FILENEXT_OFFSET
-                + this.PNTR_SIZE);
-        indx_set = hexToStr(cur_indx);
+    if ( this.fileExists(fname) ) {
+        return "failed, file exists";
     }
 
     // Now get an index
@@ -172,10 +174,10 @@ FileSystemDeviceDriver.prototype.create = function( fname ) {
 
     // Allocate 1 block of data
     var data_indx = this.allocate(false);
-    data_indx = strToHex(data_indx.join(''));
+    var hex_data_indx = strToHex(data_indx.join(''));
 
     // Check if we could allocate a block of space
-    if ( data_indx == this.INVALID_PNTR ) {
+    if ( hex_data_indx == this.INVALID_PNTR ) {
 
         // Free the index block
         this.free(new_indx, true);
@@ -183,21 +185,144 @@ FileSystemDeviceDriver.prototype.create = function( fname ) {
         return "failed, no space";
     }
 
+    // MBR DATA HAS CHANGED, REFETCH FROM BACKING STORE
+    // oh god bugs
+    var mbr_data = this.HDD.read(this.MBR);
+    var first_indx = mbr_data.slice(this.FIRST_INDEX_OFFSET,
+            this.FIRST_INDEX_OFFSET + this.PNTR_SIZE);
+
+    console.log("MBR OLD INDEX: " + hexToStr(first_indx));
+
     // Everything is okay at this point, write pointer to free data block
     // + file name followed by EOF
     // Store first_index, so we preserve the linked list, with this as the new
     // head
-    this.HDD.write(new_indx, first_indx + data_indx + fname + this.EOF);
+    this.HDD.write(new_indx, first_indx + hex_data_indx + hex_fname + this.EOF);
 
-    // MBR DATA HAS CHANGED, REFETCH FROM BACKING STORE
-    // oh god bugs
-    mbr_data = this.HDD.read(this.MBR);
+    // Update file list
+    this.file_list[fname] = [ new_indx, data_indx ];
+
     // Update the MBR to point to this as the first directory
     mbr_data = mbr_data.replace(first_indx, hex_nindx);
     // Write the data to update the mbr
     this.HDD.write(this.MBR, mbr_data);
 
     return "success";
+};
+
+/**
+ * Deletes a file
+ * 
+ * @param fname
+ *            The file name to delete
+ * @return message A message indicating creation state. One of "success",
+ *         "failed, no such file exists"
+ */
+FileSystemDeviceDriver.prototype.deleteFile = function( fname ) {
+    // Check for the file
+    if ( !this.fileExists(fname) ) {
+        return "failed, no such file exists";
+    }
+
+    // Traverse the file's data blocks, and free each one
+    // Files were enumerated by fileExists
+    // Get the index of the file
+    var findex = this.file_list[fname][0];
+    // Get the index of the first data block
+    var index_set = this.file_list[fname][1];
+    var cur_index, cur_data;
+
+    // Convert for checking
+    cur_index = strToHex(index_set.join(''));
+
+    while ( cur_index != this.INVALID_PNTR ) {
+        // Get the data
+        cur_data = this.HDD.read(index_set);
+
+        // Extract pointer to next
+        cur_index = cur_data.slice(this.DATANEXT_OFFSET, this.PNTR_SIZE);
+
+        // Free the current non-index (data) block
+        this.free(index_set, false);
+        console.log(index_set);
+
+        // Get the next set of track, sector, block
+        index_set = hexToStr(cur_index).split('');
+    }
+
+    // Get the pointer to the next directory entry
+    var nxt_dir = this.HDD.read(findex).slice(this.FILENEXT_OFFSET,
+            this.FILENEXT_OFFSET + this.PNTR_SIZE);
+
+    // Update the MBR to use nxt_dir as the new directory head
+    var mbr_data = this.HDD.read(this.MBR);
+    // Replace old index with next index
+    mbr_data = mbr_data.replace(strToHex(findex.join('')), nxt_dir);
+    // Write it to the hard drive
+    this.HDD.write(this.MBR, mbr_data);
+
+    // cry
+
+    // Free the index block
+    this.free(findex, true);
+
+    // Delete from local store
+    delete this.file_list[fname];
+
+    return "success";
+};
+
+/**
+ * Checks if a file exists
+ * 
+ * @param fname
+ *            The file to look for
+ * @return true if it exists
+ */
+FileSystemDeviceDriver.prototype.fileExists = function( fname ) {
+    if ( !this.file_list ) {
+        this.enumerateFiles();
+    }
+    return fname in this.file_list;
+};
+
+/**
+ * Enumerates a list of all files
+ * 
+ */
+FileSystemDeviceDriver.prototype.enumerateFiles = function( ) {
+    // Get the data at the MBR, for lookup
+    var mbr_data = this.HDD.read(this.MBR);
+
+    this.file_list = { };
+
+    // Get the first index
+    var cur_indx = mbr_data.slice(this.FIRST_INDEX_OFFSET,
+            this.FIRST_INDEX_OFFSET + this.PNTR_SIZE);
+
+    // Get the index data
+    var indx_set = hexToStr(cur_indx);
+    var cur_name, cur_data, fdata_ptr;
+
+    // Traverse list of directory entries
+    while ( cur_indx != this.INVALID_PNTR ) {
+        // Get the data
+        cur_data = this.HDD.read(indx_set);
+        // Get the file name, meaning everything past the pointer up to the EOF
+        cur_name = cur_data.slice(this.FNAME_START_OFFSET, cur_data
+                .indexOf(this.EOF));
+        // Get the file's first block of data
+        fdata_ptr = hexToStr(
+                cur_data.slice(this.FILEDATA_PNTR_OFFSET,
+                        this.FILEDATA_PNTR_OFFSET + this.PNTR_SIZE)).split('');
+
+        this.file_list[hexToStr(cur_name)] = [ index_set, fdata_ptr ];
+
+        // update cur_indx
+        cur_indx = cur_data.slice(this.FILENEXT_OFFSET, this.FILENEXT_OFFSET
+                + this.PNTR_SIZE);
+        indx_set = hexToStr(cur_indx);
+    }
 };
 
 /**
@@ -339,4 +464,3 @@ FileSystemDeviceDriver.prototype.format = function( ) {
             this.HDD.TRACKS);
 
 };
-
