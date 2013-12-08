@@ -157,6 +157,53 @@ FileSystemDeviceDriver.prototype.free = function( addr, index ) {
 };
 
 /**
+ * Allocates a block of data
+ * 
+ * @param index
+ *            true if requesting an index block, false if requesting a data
+ *            block
+ * @return The address of the block of data or INVALID_PNTR if one cannot be
+ *         allocated in the form [t,s,b]
+ */
+FileSystemDeviceDriver.prototype.allocate = function( index ) {
+    // Get the data at the MBR, for lookup
+    var mbr_data = this.HDD.read(this.MBR);
+
+    // Pointer to the block to allocate
+    var alloc;
+    // Pointer to the next free block
+    var free_next;
+    var new_addr;
+
+    if ( index ) {
+        // Get the current free index HEAD pointer
+        alloc = mbr_data.slice(this.FS_FREE_OFFSET, this.FS_FREE_OFFSET
+                + this.PNTR_SIZE);
+    }
+    else {
+        // Get the current free data HEAD pointer
+        alloc = mbr_data.slice(this.DATA_FREE_OFFSET, this.DATA_FREE_OFFSET
+                + this.PNTR_SIZE);
+    }
+
+    // Update the MBR with the next free block
+    if ( alloc != this.INVALID_PNTR ) {
+        new_addr = hexToStr(alloc).split('');
+        // Get the data in the block, and the address of the next block
+        // located as the first 3 bytes
+        free_next = this.HDD.read(new_addr).slice(this.PNTR_SIZE);
+        // Update the mbr
+        mbr_data.replace(alloc, free_next);
+        // Write the data to update the mbr
+        this.HDD.write(this.MBR, mbr_data);
+        // Update the pointer data at alloc to be INVALID_PNTR
+        this.HDD.write(new_addr, this.INVALID_PNTR);
+    }
+
+    return hexToStr(alloc).split('');
+};
+
+/**
  * Sets up the file system driver. Will format the disk if it detects that the
  * drive is in an invalid state.
  * 
