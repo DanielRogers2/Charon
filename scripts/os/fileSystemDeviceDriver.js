@@ -59,6 +59,9 @@ function FileSystemDeviceDriver( ) {
     // Maximum number of characters in a file name
     this.MAX_FNAME_SIZE = undefined;
 
+    // Data stored per block
+    this.DATA_PER_BLOCK = undefined;
+
     // Offset where filename starts
     this.FNAME_START_OFFSET = 2 * this.PNTR_SIZE;
 
@@ -101,8 +104,13 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
 
     // Set maximum number of characters in a file name
     // Need enough room for an EOF + two pointers
-    this.MAX_FNAME_SIZE = this.HDD.BLOCK_SIZE - this.EOF.length
+    this.MAX_FNAME_SIZE = this.HDD.BLOCK_SIZE * 2 - this.EOF.length
             - this.FNAME_START_OFFSET;
+
+    // Data stored per block
+    // Need enough room for an EOF + 1 pointer
+    this.DATA_PER_BLOCK = this.HDD.BLOCK_SIZE * 2 - this.EOF.length
+            - this.DATA_OFFSET;
 
     // Enumerate the files
     this.enumerateFiles();
@@ -120,6 +128,14 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
     // Should contain hexToStr(DEADBEEF) : first_data_block
     console.log(this.file_list);
 
+    this.write([ 1, 0, 0 ], strToHex("this is a really long string"
+            + " holy shit not really kindof"));
+    console.log(hexToStr(this.read([ 1, 0, 0 ])));
+
+    this.write([ 1, 0, 0 ], strToHex("how was that exactly two blocks idk,"
+            + " oh it was a bug yeah"));
+    console.log(hexToStr(this.read([ 1, 0, 0 ])));
+
     // Should succeed
     console.log(this.deleteFile(hexToStr("DEADBEEF")));
 
@@ -128,6 +144,8 @@ FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
 
     // Should succeed
     console.log(this.createFile(hexToStr("DEADBEEF")));
+    // Should print nothing
+    console.log(hexToStr(this.read([ 1, 0, 0 ])));
 
     // Should contain hexToStr(DEADBEEF) : first_data_block
     console.log(this.file_list);
@@ -175,7 +193,7 @@ FileSystemDeviceDriver.prototype.createFile = function( fname ) {
     // Allocate 1 block of data
     var data_indx = this.allocate(false);
     var hex_data_indx = strToHex(data_indx.join(''));
-
+        
     // Check if we could allocate a block of space
     if ( hex_data_indx == this.INVALID_PNTR ) {
 
@@ -190,8 +208,6 @@ FileSystemDeviceDriver.prototype.createFile = function( fname ) {
     var mbr_data = this.HDD.read(this.MBR);
     var first_indx = mbr_data.slice(this.FIRST_INDEX_OFFSET,
             this.FIRST_INDEX_OFFSET + this.PNTR_SIZE);
-
-    console.log("MBR OLD INDEX: " + hexToStr(first_indx));
 
     // Everything is okay at this point, write pointer to free data block
     // + file name followed by EOF
@@ -280,8 +296,8 @@ FileSystemDeviceDriver.prototype.deleteFile = function( fname ) {
  */
 FileSystemDeviceDriver.prototype.read = function( addr ) {
     var data = '';
-    // Go through all blocks and read until EOF is encountered
 
+    // Go through all blocks and read until EOF is encountered
     var index_set = addr;
     var cur_index, cur_data;
 
@@ -296,13 +312,144 @@ FileSystemDeviceDriver.prototype.read = function( addr ) {
         cur_index = cur_data.slice(this.DATANEXT_OFFSET, this.PNTR_SIZE);
 
         // Read the file data, up to EOF
-        data += cur_data.slice(this.DATA_START, cur_data.indexOf(this.EOF));
+        data += cur_data.slice(this.DATA_OFFSET, this.EOFIndex(cur_data));
 
         // Get the next set of track, sector, block
         index_set = hexToStr(cur_index).split('');
     }
 
     return data;
+};
+
+/**
+ * Gets the index of EOF from a hex string
+ * 
+ * @param hex
+ *            The hex string to look for EOF in
+ * @return -1 if not found, otherwise the index of the string
+ * 
+ */
+FileSystemDeviceDriver.prototype.EOFIndex = function( hex ) {
+    // Convert data into 2byte sets
+    var getbytes = function( hex ) {
+        var data = [ ];
+        hex = hex.split('');
+        for ( var i = 0; i < hex.length; i += 2 ) {
+            data[i / 2] = hex.slice(i, i + 2).join('');
+        }
+
+        return data;
+    };
+    
+    // Multiply by two, since outside is looking at single characters and not
+    // bytes
+    return 2 * getbytes(hex).indexOf(this.EOF);
+};
+
+/**
+ * Writes a contiguous block of data starting at an address. Will rollback
+ * changes if unsuccessful
+ * 
+ * @param addr
+ *            The start address to write to
+ * @param data
+ *            The HEX data string to write
+ * @return true if the write succeeded
+ */
+FileSystemDeviceDriver.prototype.write = function( addr, data ) {
+    var datasets = [ ];
+    var block_indexes = [ ];
+
+    // Create blocks of maximum data block size
+    for ( var i = 0; i < data.length; i += this.DATA_PER_BLOCK ) {
+        datasets.push(data.slice(i, i + this.DATA_PER_BLOCK));
+    }
+
+    // Allocate all the blocks needed
+    // First get all the current blocks, to see if more are needed
+    var index_set = addr;
+    var cur_index, cur_data;
+
+    cur_index = strToHex(index_set.join(''));
+
+    while ( cur_index != this.INVALID_PNTR ) {
+        // Record the block index
+        block_indexes.push(index_set);
+
+        // Get the data
+        cur_data = this.HDD.read(index_set);
+
+        // Extract pointer to next
+        cur_index = cur_data.slice(this.DATANEXT_OFFSET, this.PNTR_SIZE);
+
+        // Get the next set of track, sector, block
+        index_set = hexToStr(cur_index).split('');
+    }
+
+    var spareblocks = block_indexes.length - datasets.length;
+
+    // See if we need to allocate more
+    if ( spareblocks < 0 ) {
+        // Try to allocate more data
+        var allocd_blocks = [ ];
+        var block, success;
+        success = true;
+
+        // Do the allocation
+        for ( var i = 0; i < ( -spareblocks ); ++i ) {
+            block = this.allocate(false);
+            // Check for no more memory
+            if ( strToHex(block.join('')) == this.INVALID_PNTR ) {
+                // uh-oh
+                success = false;
+                break;
+            }
+            else {
+                allocd_blocks.push(block);
+            }
+        }
+
+        // Allocation failed, free blocks
+        if ( !success ) {
+            for ( var i = 0; i < allocd_blocks.lengh; ++i ) {
+                this.free(allocd_blocks[i], false);
+            }
+            // =(
+            return false;
+        }
+        // Allocation successful, add to blockindexes
+        else {
+            for ( var i = 0; i < allocd_blocks.length; ++i ) {
+                block_indexes.push(allocd_blocks[i]);
+            }
+        }
+    }
+    // See if we need to free up data blocks
+    else if ( spareblocks > 0 ) {
+        // Free the blocks at the end
+        for ( var i = block_indexes.length - spareblocks; i < block_indexes.length; ++i ) {
+            this.free(block_indexes[i], false);
+        }
+        // Trim the array
+        block_indexes = block_indexes.slice(0, block_indexes.length
+                - spareblocks);
+    }
+
+    // Set the last index to invalid index
+    block_indexes.push(hexToStr(this.INVALID_PNTR).split(''));
+
+    // Yay, the mess above is already taken care of, now just write the data...
+    var hexaddr;
+
+    for ( var i = 0; i < block_indexes.length - 1; ++i ) {
+        // Write @ location: pntr_to_next + data + EOF
+        // Since block_indexes[-1] == 777, we won't have to manually mark end of
+        // chain
+        hexaddr = strToHex(block_indexes[i + 1].join(''));
+        this.HDD.write(block_indexes[i], hexaddr + datasets[i] + this.EOF);
+    }
+
+    return true;
 };
 
 /**
@@ -342,8 +489,8 @@ FileSystemDeviceDriver.prototype.enumerateFiles = function( ) {
         // Get the data
         cur_data = this.HDD.read(indx_set);
         // Get the file name, meaning everything past the pointer up to the EOF
-        cur_name = cur_data.slice(this.FNAME_START_OFFSET, cur_data
-                .indexOf(this.EOF));
+        cur_name = cur_data.slice(this.FNAME_START_OFFSET, this
+                .EOFIndex(cur_data));
         // Get the file's first block of data
         fdata_ptr = hexToStr(
                 cur_data.slice(this.FILEDATA_PNTR_OFFSET,
@@ -370,6 +517,12 @@ FileSystemDeviceDriver.prototype.free = function( addr, index ) {
     // Get the data at the MBR, for lookup
     var mbr_data = this.HDD.read(this.MBR);
     var hex_addr = strToHex(addr.join(''));
+
+    // this would be really bad if it happened
+    // IF
+    if ( hex_addr == this.INVALID_PNTR ) {
+        return;
+    }
 
     // Pointer to the next free block
     var free_next;
@@ -435,10 +588,14 @@ FileSystemDeviceDriver.prototype.allocate = function( index ) {
         mbr_data = mbr_data.replace(alloc, free_next);
         // Write the data to update the mbr
         this.HDD.write(this.MBR, mbr_data);
-        // Update the pointer data at alloc to be INVALID_PNTR
-        this.HDD.write(new_addr, this.INVALID_PNTR + this.INVALID_PNTR
-                + this.EOF);
 
+        // If it's an index file, need two invalid pointers for next_index
+        // & data start
+        var basedata = ( index ) ? this.INVALID_PNTR : '';
+        basedata += this.INVALID_PNTR + this.EOF;
+
+        // Update the pointer data at alloc to be INVALID_PNTR
+        this.HDD.write(new_addr, basedata);
     }
 
     return hexToStr(alloc).split('');
