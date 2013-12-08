@@ -244,7 +244,6 @@ FileSystemDeviceDriver.prototype.deleteFile = function( fname ) {
 
         // Free the current non-index (data) block
         this.free(index_set, false);
-        console.log(index_set);
 
         // Get the next set of track, sector, block
         index_set = hexToStr(cur_index).split('');
@@ -280,7 +279,7 @@ FileSystemDeviceDriver.prototype.deleteFile = function( fname ) {
  * @return true if it exists
  */
 FileSystemDeviceDriver.prototype.fileExists = function( fname ) {
-    if ( !this.file_list ) {
+    if ( !this.file_list || this.file_list == { } ) {
         this.enumerateFiles();
     }
     return fname in this.file_list;
@@ -301,7 +300,7 @@ FileSystemDeviceDriver.prototype.enumerateFiles = function( ) {
             this.FIRST_INDEX_OFFSET + this.PNTR_SIZE);
 
     // Get the index data
-    var indx_set = hexToStr(cur_indx);
+    var indx_set = hexToStr(cur_indx).split('');
     var cur_name, cur_data, fdata_ptr;
 
     // Traverse list of directory entries
@@ -316,12 +315,12 @@ FileSystemDeviceDriver.prototype.enumerateFiles = function( ) {
                 cur_data.slice(this.FILEDATA_PNTR_OFFSET,
                         this.FILEDATA_PNTR_OFFSET + this.PNTR_SIZE)).split('');
 
-        this.file_list[hexToStr(cur_name)] = [ index_set, fdata_ptr ];
+        this.file_list[hexToStr(cur_name)] = [ indx_set, fdata_ptr ];
 
         // update cur_indx
         cur_indx = cur_data.slice(this.FILENEXT_OFFSET, this.FILENEXT_OFFSET
                 + this.PNTR_SIZE);
-        indx_set = hexToStr(cur_indx);
+        indx_set = hexToStr(cur_indx).split('');
     }
 };
 
