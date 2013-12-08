@@ -583,9 +583,26 @@ function Shell( kernel ) {
      */
     sc = new ShellCommand();
     sc.command = 'format';
-    sc.description = 'formats the disk';
+    sc.description = ' formats the disk';
     sc.action = function( args ) {
         shell.kernel.fsDriver.format();
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * List the available files
+     */
+    sc = new ShellCommand();
+    sc.command = 'ls';
+    sc.description = ' lists current files';
+    sc.action = function( args ) {
+        // Get the list of files
+        var files = shell.kernel.fsDriver.file_list;
+        for ( file in files ) {
+            // Put them out one by one
+            shell.stdOut.putText(file);
+            shell.stdOut.advanceLine();
+        }
     };
     this.commandList[this.commandList.length] = sc;
 
