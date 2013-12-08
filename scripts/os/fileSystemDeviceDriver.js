@@ -79,57 +79,38 @@ function FileSystemDeviceDriver( ) {
 };
 
 /**
- * Formats the hard drive
+ * Sets up the file system driver. Will format the disk if it detects that the
+ * drive is in an invalid state.
  * 
+ * @param HDD
+ *            The drive to connect to
  */
-FileSystemDeviceDriver.prototype.format = function( ) {
-    // Initialize the MBR
-    this.HDD.write(this.MBR, this.MBR_INITIAL);
-
-    // "zero initialize" everything
-    var pad = [ ];
-    // Size is full block, less room for pointer + EOF
-    for ( var i = 0; i < this.HDD.BLOCK_SIZE - this.PNTR_SIZE / 2 - 1; ++i ) {
-        pad[i] = '00';
+FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
+    // set the HDD
+    this.HDD = HDD;
+    // See if it needs to be formated
+    var MBR_DATA = this.HDD.read(this.MBR);
+    var secret = MBR_DATA.slice(0, this.MBR_HEADER.length);
+    if ( secret != this.MBR_HEADER ) {
+        this.format();
     }
-    pad = pad.join('');
 
-    var self = this;
+    // Set maximum number of characters in a file name
+    // Need enough room for an EOF + two pointers
+    this.MAX_FNAME_SIZE = this.HDD.BLOCK_SIZE - this.EOF.length
+            - this.FNAME_START_OFFSET;
 
-    var tag_blocks = function( tstart, sstart, bstart, tend ) {
-        var free_next;
+    /*
+     * console.log(this.create(hexToStr("DEADBEEF")));
+     * 
+     * var indx = this.allocate(true);
+     * 
+     * console.log(indx);
+     * 
+     * this.free(indx, true);
+     */
 
-        // Write to each track in range
-        for ( var t = tstart; t < tend; ++t ) {
-            // Write to each sector
-            for ( var s = sstart; s < self.HDD.SECTORS; ++s ) {
-                // Write to each block in sector
-                for ( var b = bstart; b < self.HDD.BLOCKS; ++b ) {
-                    // Get the pointer to the next block
-                    free_next = [ t, s, ( b + 1 ) % self.HDD.BLOCKS ];
-                    // Add an EOF
-                    free_next = strToHex(free_next.join('')) + self.EOF;
-
-                    self.HDD.write([ t, s, b ], free_next + pad);
-                }
-            }
-        }
-
-        var t = tend - 1;
-        var s = self.HDD.SECTORS - 1;
-        var b = self.HDD.BLOCKS - 1;
-        // Flag with invalid pointer at end
-        self.HDD.write([ t, s, b ], self.INVALID_PNTR);
-    };
-
-    // Tag all blocks as free
-    // first the index blocks
-    tag_blocks(this.FS_INDEX_START[0], this.FS_INDEX_START[1],
-            this.FS_INDEX_START[2], this.DATA_START[0]);
-    // Then the data blocks
-    tag_blocks(this.DATA_START[0], this.DATA_START[1], this.DATA_START[2],
-            this.HDD.TRACKS);
-
+    this.status = "loaded";
 };
 
 /**
@@ -306,36 +287,56 @@ FileSystemDeviceDriver.prototype.allocate = function( index ) {
 };
 
 /**
- * Sets up the file system driver. Will format the disk if it detects that the
- * drive is in an invalid state.
+ * Formats the hard drive
  * 
- * @param HDD
- *            The drive to connect to
  */
-FileSystemDeviceDriver.prototype.driverEntry = function( HDD ) {
-    // set the HDD
-    this.HDD = HDD;
-    // See if it needs to be formated
-    var MBR_DATA = this.HDD.read(this.MBR);
-    var secret = MBR_DATA.slice(0, this.MBR_HEADER.length);
-    if ( secret != this.MBR_HEADER ) {
-        this.format();
+FileSystemDeviceDriver.prototype.format = function( ) {
+    // Initialize the MBR
+    this.HDD.write(this.MBR, this.MBR_INITIAL);
+
+    // "zero initialize" everything
+    var pad = [ ];
+    // Size is full block, less room for pointer + EOF
+    for ( var i = 0; i < this.HDD.BLOCK_SIZE - this.PNTR_SIZE / 2 - 1; ++i ) {
+        pad[i] = '00';
     }
+    pad = pad.join('');
 
-    // Set maximum number of characters in a file name
-    // Need enough room for an EOF + two pointers
-    this.MAX_FNAME_SIZE = this.HDD.BLOCK_SIZE - this.EOF.length
-            - this.FNAME_START_OFFSET;
+    var self = this;
 
-    /*
-     * console.log(this.create(hexToStr("DEADBEEF")));
-     * 
-     * var indx = this.allocate(true);
-     * 
-     * console.log(indx);
-     * 
-     * this.free(indx, true);
-     */
+    var tag_blocks = function( tstart, sstart, bstart, tend ) {
+        var free_next;
 
-    this.status = "loaded";
+        // Write to each track in range
+        for ( var t = tstart; t < tend; ++t ) {
+            // Write to each sector
+            for ( var s = sstart; s < self.HDD.SECTORS; ++s ) {
+                // Write to each block in sector
+                for ( var b = bstart; b < self.HDD.BLOCKS; ++b ) {
+                    // Get the pointer to the next block
+                    free_next = [ t, s, ( b + 1 ) % self.HDD.BLOCKS ];
+                    // Add an EOF
+                    free_next = strToHex(free_next.join('')) + self.EOF;
+
+                    self.HDD.write([ t, s, b ], free_next + pad);
+                }
+            }
+        }
+
+        var t = tend - 1;
+        var s = self.HDD.SECTORS - 1;
+        var b = self.HDD.BLOCKS - 1;
+        // Flag with invalid pointer at end
+        self.HDD.write([ t, s, b ], self.INVALID_PNTR);
+    };
+
+    // Tag all blocks as free
+    // first the index blocks
+    tag_blocks(this.FS_INDEX_START[0], this.FS_INDEX_START[1],
+            this.FS_INDEX_START[2], this.DATA_START[0]);
+    // Then the data blocks
+    tag_blocks(this.DATA_START[0], this.DATA_START[1], this.DATA_START[2],
+            this.HDD.TRACKS);
+
 };
+
