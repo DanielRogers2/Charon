@@ -298,6 +298,8 @@ function Shell( kernel ) {
                 if ( pid in shell.kernel.loadedProcesses ) {
                     // Valid process to execute
                     shell.kernel.queueProgram(pid);
+
+                    shell.kernel.startExecution();
                 }
                 else {
                     shell.stdOut.putText("No such program");
@@ -339,6 +341,8 @@ function Shell( kernel ) {
             for ( var i = 0; i < pids.length; ++i ) {
                 shell.kernel.queueProgram(pids[i]);
             }
+
+            shell.kernel.startExecution();
         }
     };
     this.commandList[this.commandList.length] = sc;

@@ -433,15 +433,44 @@ Kernel.prototype.queueProgram = function( pid ) {
         'priority' : this.loadedProcesses[pid].priority
     };
     this.priorityQueue.insert(pr_obj);
+};
 
+/**
+ * Starts execution of queued programs
+ */
+Kernel.prototype.startExecution = function( ) {
     if ( !this.activeProcess ) {
         // Make a decision now, if no active program
-        this.activeProcess = this.loadedProcesses[this.shortTermSched
-                .startNext()];
+        var nxt = this.shortTermSched.startNext();
+
+        if ( typeof nxt == 'object' && 'priority' in nxt ) {
+            nxt = nxt.PID;
+            // Remove it from the ready queue
+            var rem_i = this.readyQueue.q.indexOf(nxt);
+            if ( rem_i != -1 )
+                this.readyQueue.q.splice(rem_i, 1);
+        }
+        else {
+            // Remove it from the priority queue
+            var rem_i = -1;
+            for ( var i = 0; i < this.priorityQueue.heap.length; ++i ) {
+                if ( this.priorityQueue.heap[i].PID == nxt ) {
+                    rem_i = i;
+                    break;
+                }
+            }
+            if ( rem_i != -1 ) {
+                this.priorityQueue.heap.splice(rem_i, 1);
+                this.priorityQueue.heapifyArray();
+            }
+        }
+
+        // Set it as active
+        this.activeProcess = this.loadedProcesses[nxt];
+        // Prepare the CPU
         this.activeProcess.load();
         this.CPU.isExecuting = true;
-    }
-    else {
+
         this.host.updateRQDisplay();
     }
 };
