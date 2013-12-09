@@ -587,7 +587,7 @@ function Shell( kernel ) {
     sc.action = function( args ) {
         shell.kernel.fsDriver.format();
         // Clear loaded programs
-        shell.kernel.kernel.loadedProcesses = { };
+        shell.kernel.loadedProcesses = { };
     };
     this.commandList[this.commandList.length] = sc;
 
