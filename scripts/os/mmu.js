@@ -226,6 +226,9 @@ MMU.prototype.allocateMem = function( pcb, bytes ) {
             // Store page in pcb
             pcb.pageList.push(pageId);
 
+            // Mark it as owned
+            this.owners[pageId] = pcb.PID;
+
             // Zero-write to the page, to make sure there is enough memory
             write_success = this.backedWrite(backed, this.zero_page);
 
@@ -245,8 +248,8 @@ MMU.prototype.allocateMem = function( pcb, bytes ) {
             // Un-successful
             return false;
         }
-        
-        //PCB has paged memory
+
+        // PCB has paged memory
         pcb.status = 'paged';
     }
 
@@ -273,6 +276,8 @@ MMU.prototype.freeMem = function( pcb, bytes ) {
     while ( freed + this.PAGE_SIZE <= bytes ) {
         // Get the next pageID
         page = pcb.pageList.pop();
+        delete this.owners[page];
+        
         // Page is using up physical memory
         if ( page in this.cachedMap ) {
             // Mark it as available
