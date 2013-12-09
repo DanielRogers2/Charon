@@ -333,11 +333,16 @@ function Shell( kernel ) {
     sc.action = function( args ) {
         var pids = Object.keys(shell.kernel.loadedProcesses);
         pids.sort();
+        pids = pids.map(function( id ) {
+            return parseInt(id);
+        });
 
         if ( pids.length == 0 ) {
             shell.stdOut.putText("No loaded processes");
         }
         else {
+
+            console.log(pids);
             for ( var i = 0; i < pids.length; ++i ) {
                 shell.kernel.queueProgram(pids[i]);
             }
