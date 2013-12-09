@@ -15,8 +15,22 @@
  *            id.
  * @param memory
  *            A pointer to main memory for the MMU to read/write to
+ * @param alloc
+ *            A function that will return a key for use with a backing store
+ * @param read
+ *            A function that will return an array of bytes contained in the
+ *            backing store, provided a key obtained through alloc
+ * @param write
+ *            A function that will take a key obtained by alloc, and an array of
+ *            bytes, and put the bytes on the backing store so that a subsequent
+ *            read will return the bytes.
+ * @param release
+ *            A function that will take a key obtained by alloc and is used by
+ *            the MMU to indicate that it will no longer be using the provided
+ *            backing store key
  */
-function MMU( access_violation_handler, pcb_lookup, memory ) {
+function MMU( access_violation_handler, pcb_lookup, memory, alloc, read, write,
+        release ) {
 
     // Programs only get 256 bytes of mem
     this.PROGRAM_ALLOWED_MEM = 256;
@@ -30,19 +44,43 @@ function MMU( access_violation_handler, pcb_lookup, memory ) {
     // Kernel-supplied process control block accessor
     this.getPcb = pcb_lookup;
 
-    // List of free memory pages
-    // TODO Set of virtual memory handling
+    // Kernel-supplied access to file allocation
+    this.allocPage = alloc;
+    // Kernel-supplied access to file reading
+    this.backedRead = read;
+    // Kernel-supplied access to file writing
+    this.backedWrite = write;
+    // Kernel-supplied access to file release
+    this.releasePage = release;
+
+    // Just an incremental counter for page #'s
+    this.next_page = 0;
+
+    // List of physical memory page addresses
+    this.pageAddresses = [ ];
+
+    // List of free pages, as indexes into pageAddresses table
     this.freePages = [ ];
 
-    // Mapping of page values to physical addresses
-    this.pageMap = { };
+    // Mapping of page values to physical addresses in memory
+    // A map of page# => pageAddresses index
+    this.cachedMap = { };
+
+    // Mapping of page values to values on the backing store
+    // A map of page# ==> backing store key
+    this.backedMap = { };
+
+    // A zero-page, for use during virtual memory allocation
+    this.zero_page = [ ];
+    for ( var i = 0; i < this.PAGE_SIZE; ++i ) {
+        this.zero_page[i] = '00';
+    }
 
     // Populate list with free physical memory pages
     for ( var i = 0; i < Math.floor(this.memory.SIZE / this.PAGE_SIZE); ++i ) {
+        // Store address in physical memory
+        this.pageAddresses[i] = i * this.PAGE_SIZE;
         this.freePages[i] = i;
-        // Only mapping virtual to physical mem right now, so we don't care
-        // about swappint, etc
-        this.pageMap[i] = i * this.PAGE_SIZE;
     }
 }
 
@@ -50,8 +88,7 @@ function MMU( access_violation_handler, pcb_lookup, memory ) {
  * Reads a byte of data from the currently executing program's memory space
  * 
  * @param addr
- *            The address to read from (as a decimal value) This will be wrapped
- *            to remain inside the program's memory space.
+ *            The address to read from (as a decimal value).
  * @return The byte of data at addr.
  */
 MMU.prototype.read = function( addr ) {
@@ -116,12 +153,23 @@ MMU.prototype.zeroMem = function( pcb ) {
         }
     };
 
+    var pageId;
     // Get each page from the allocated pages and zero them
     for ( var i = 0; i < pcb.pageList.length; ++i ) {
-        zero(this.pageMap[pcb.pageList[i]]);
+        pageId = pcb.pageList[i];
+        if ( pageId in this.cachedMap ) {
+            // zero physical memory
+            zero(this.cachedMap[pageId]);
+        }
+        else {
+            // Zero backing store
+            this.backedWrite(this.backedMap[pageId], this.zero_page);
+        }
     }
 };
+
 /**
+ * Does initial memory allocation for a PCB.
  * 
  * @return false if no memory to allocate
  */
@@ -129,18 +177,67 @@ MMU.prototype.allocateMem = function( pcb, bytes ) {
 
     if ( DEBUG ) {
         console.log("alloc: " + bytes);
-        console.log("free: " + ( this.freePages.length * this.PAGE_SIZE ));
+        console.log("free: " + ( this.pageAddresses.length * this.PAGE_SIZE ));
     }
 
-    if ( ( this.freePages.length * this.PAGE_SIZE ) < bytes
-            || ( pcb.memLimit + bytes ) > this.PROGRAM_ALLOWED_MEM ) {
-        // There are not enough pages to allocate to the pcb, or it's not
-        // allowed to have more
+    if ( ( pcb.memLimit + bytes ) > this.PROGRAM_ALLOWED_MEM ) {
+        // it's not allowed to have more
         return false;
     }
 
-    for ( var i = 0; i < bytes; i += this.PAGE_SIZE ) {
-        pcb.pageList.push(this.freePages.shift());
+    // Number of pages allocated
+    var allocd = 0;
+
+    // See if there is free physical memory
+    if ( Object.keys(this.cachedMap).length < this.freePages.length ) {
+        // Less pages cached in physical memory than free Pages
+        for ( ; allocd < bytes && this.freePages.length; allocd += this.PAGE_SIZE ) {
+            // Add pages until out of cache-able memory, or all bytes written
+
+            // Map page# to freePage index
+            var pageId = this.nextPage();
+            this.cachedMap[pageID] = this.freePages.shift();
+
+            // Store page in pcb
+            pcb.pageList.push(pageId);
+        }
+    }
+
+    if ( allocd < Math.floor(bytes / this.PAGE_SIZE) ) {
+        // Didn't allocate enough pages, need to write to disk
+        var write_success = true;
+
+        for ( ; allocd < bytes; allocd += this.PAGE_SIZE ) {
+            // Write to disk, and map to page
+            var pageId = this.nextPage();
+            // Get backed memory
+            var backed = this.allocPage();
+
+            // Map pageid->backed memory
+            this.backedMap[pageId] = backed;
+
+            // Store page in pcb
+            pcb.pageList.push(pageId);
+
+            // Zero-write to the page, to make sure there is enough memory
+            write_success = this.backedWrite(backed, this.zero_page);
+
+            // See if we could allocate enough room for a page
+            if ( !write_success ) {
+                // need to walk back
+                break;
+            }
+
+        }
+
+        if ( !write_success ) {
+            // Walk-back allocation
+            // Since pcb has the page list, just free
+            this.freeMem(pcb, allocd);
+
+            // Un-successful
+            return false;
+        }
     }
 
     // Update its memory limit
@@ -150,29 +247,105 @@ MMU.prototype.allocateMem = function( pcb, bytes ) {
 };
 
 /**
- * Frees memory used by a PCB
+ * Gets the next Page ID
+ */
+MMU.prototype.nextPage = function( ) {
+    return this.next_page++;
+};
+
+/**
+ * Frees memory used by a PCB.
  */
 MMU.prototype.freeMem = function( pcb, bytes ) {
 
     var freed = 0;
+    var page;
     while ( freed + this.PAGE_SIZE <= bytes ) {
-        this.freePages.push(pcb.pageList.pop());
+        // Get the next pageID
+        page = pcb.pageList.pop();
+        // Page is using up physical memory
+        if ( page in this.cachedMap ) {
+            // Mark it as available
+            this.freePages.push(this.cachedMap[page]);
+            // Remove it from the list of used cached memory
+            delete this.cachedMap[page];
+        }
+        else {
+            // Page is on disk
+            // get the disk key and free the disk space
+            this.releasePage(this.backedMap[page]);
+            // Remove it from the list of disk-backed pages
+            delete this.backedMap[page];
+        }
+
         freed += this.PAGE_SIZE;
     }
 };
 
 /**
- * Translates an address to the physical memory location Assumes that addr is in
- * the memory allowed for PCB
+ * Translates an address to the physical memory location. Assumes that addr is
+ * in the memory allowed for PCB
  */
 MMU.prototype.translate = function( pcb, addr ) {
     // Get the page it's looking for
     var pageID = pcb.pageList[Math.floor(addr / this.PAGE_SIZE)];
+
     // Base page address
-    var memaddr = this.pageMap[pageID];
+    var memaddr;
+
+    // See if in physical memory
+    if ( !( pageID in this.cachedMap ) ) {
+        // Need to swap in from disk
+        // Select a random page
+        var victim = Math.floor(Math.random()
+                * Object.keys(this.cachedMap).length);
+        // kill it, back to disk
+        victim = Object.keys(this.cachedMap)[victim];
+
+        // Get the backing store key
+        var backedKey = this.backedMap[pageID];
+
+        // Store the incoming program's data from the backing store
+        var incoming = this.backedRead(backedKey);
+
+        // Read the outgoing data cached in physical memory
+        // Get the page start address
+        memaddr = this.cachedMap[victim];
+        var outgoing = [ ];
+        for ( var i = 0; i < this.PAGE_SIZE; ++i ) {
+            // Read byte
+            outgoing[i] = this.memory.read(memaddr);
+            // Move up a byte
+            ++memaddr;
+        }
+
+        // Write page to backing store
+        // TODO Check for write success
+        this.backedWrite(backedKey, outgoing);
+
+        // Write incoming data to physical memory
+        memaddr = this.cachedMap[victim];
+        for ( var i = 0; i < this.PAGE_SIZE; ++i ) {
+            this.memory.write(memaddr, incoming[i]);
+            // Move up a byte
+            ++memaddr;
+        }
+
+        // Set pageID to be replaced page location
+        this.cachedMap[pageID] = this.cachedMap[victim];
+        // Set victim to reference backing store
+        this.backedMap[victim] = backedKey;
+
+        // delete old reference to cached
+        delete this.cachedMap[victim];
+        // delete old reference to backed
+        delete this.backedMap[pageID];
+    }
+
+    // Get page start
+    memaddr = this.cachedMap[pageID];
     // Offset into page
     memaddr += addr % this.PAGE_SIZE;
 
-    // TODO Handle paging
     return memaddr;
 };

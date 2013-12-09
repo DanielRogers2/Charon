@@ -204,7 +204,38 @@ function Kernel( host ) {
         }
     };
 
-    this.MMU = new MMU(mem_acc_viol_handlr, pcb_lookp, this.memory);
+    // Function to allocate blocks of memory on the disk
+    var alloc = function( ) {
+        // Just allocate one block on disk
+        return kernel.fsDriver.allocate(false);
+    };
+
+    // function to read a byte array from disk
+    var read = function( addr ) {
+        // Read the data from the disk
+        var data = kernel.fsDriver.read(addr).split('');
+        // make the byte array
+        var bytes = [ ];
+        for ( var i = 0; i < data.length; i += 2 ) {
+            bytes[i / 2] = data[i] + '' + data[i + 1];
+        }
+
+        return bytes;
+    };
+
+    // function to write a byte array to disk
+    var write = function( addr, data ) {
+        // Write to the disk, data already hex
+        return kernel.fsDriver.write(addr, data.join(''));
+    };
+
+    // Function to release allocated sectors
+    var release = function( addr ) {
+        kernel.fsDriver.del(addr);
+    };
+
+    this.MMU = new MMU(mem_acc_viol_handlr, pcb_lookp, this.memory, alloc,
+            read, write, release);
 
     // Do something for somehow where?
     this.buffers = new Array();
