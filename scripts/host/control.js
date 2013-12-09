@@ -330,6 +330,7 @@ Host.prototype.updateRQDisplay = function( ) {
     var createDisplayStrings = function( pcb ) {
         var ret = [ ];
         ret.push("State: " + pcb.state);
+        ret.push("Priority: " + pcb.priority);
         ret.push("CPU_PC: " + pcb.PC);
         ret.push("CPU_Acc: " + pcb.Acc);
         ret.push("CPU_Xreg: " + pcb.Xreg);
