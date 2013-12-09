@@ -406,6 +406,17 @@ function Shell( kernel ) {
     this.commandList[this.commandList.length] = sc;
 
     /*
+     * Gets the scheduling type
+     */
+    sc = new ShellCommand();
+    sc.command = 'getschedule';
+    sc.description = ' - gets the scheduling type';
+    sc.action = function( ) {
+        shell.stdOut.putText(shell.kernel.shortTermSched.mode);
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
      * Step through a loaded program
      */
     sc = new ShellCommand();
