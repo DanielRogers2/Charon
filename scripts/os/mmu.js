@@ -232,8 +232,6 @@ MMU.prototype.allocateMem = function( pcb, bytes ) {
             // See if we could allocate enough room for a page
             if ( !write_success ) {
                 // need to walk back
-                console.log("alloc write fail");
-                console.log(backed);
                 break;
             }
 
@@ -247,6 +245,9 @@ MMU.prototype.allocateMem = function( pcb, bytes ) {
             // Un-successful
             return false;
         }
+        
+        //PCB has paged memory
+        pcb.status = 'paged';
     }
 
     // Update its memory limit
@@ -283,7 +284,6 @@ MMU.prototype.freeMem = function( pcb, bytes ) {
             // Page is on disk
             // get the disk key and free the disk space
             this.releasePage(this.backedMap[page]);
-            console.log("disk free");
             // Remove it from the list of disk-backed pages
             delete this.backedMap[page];
         }
