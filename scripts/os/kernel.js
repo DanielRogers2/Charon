@@ -246,6 +246,11 @@ function Kernel( host ) {
     this.trace("Setting up the short term scheduler");
     // The ready queue
     this.readyQueue = new Queue();
+    // the priority queue
+    var compare_fn = function( a, b ) {
+        return a.priority == b.priority ? 0 : a.priority < b.priority ? -1 : 1;
+    };
+    this.priorityQueue = new MinHeap(null, compare_fn);
 
     // Context switch handling function for the STS
     var ctxt_switcher = function( pid ) {
@@ -257,8 +262,8 @@ function Kernel( host ) {
     };
 
     // Set up a new short-term scheduler
-    this.shortTermSched = new STS(this.readyQueue, undefined, ctxt_switcher,
-            cpu_t_updater, tracer);
+    this.shortTermSched = new STS(this.readyQueue, this.priorityQueue,
+            ctxt_switcher, cpu_t_updater, tracer);
 
     // Handles the CPU interrupt and executes scheduling decisions
     this.IV[this.CPU_TIMER_IRQ] = function( params ) {
@@ -270,8 +275,33 @@ function Kernel( host ) {
     this.trace("Setting up context switch handling");
     this.IV[this.CTXT_SWITCH_IRQ] = function( params ) {
         // Params == pcb to load
+        var pid;
+        if ( typeof params[0] == 'object' && 'priority' in params[0] ) {
+            // It came from the priority queue
+            pid = params[0].PID;
+            // Remove it from the ready queue
+            var rem_i = kernel.readyQueue.q.indexOf(pid);
+            if ( rem_i != -1 )
+                kernel.readyQueue.q.splice(rem_i, 1);
+        }
+        else {
+            // It came from the ready queue
+            pid = params[0];
+            // Remove it from the priority queue
+            var pr_obj =
+            {
+                'PID' : pid,
+                'priority' : kernel.loadedProcesses[pid].priority
+            };
+            var rem_i = kernel.priorityQueue.heap.indexOf(pr_obj);
+            if ( rem_i != -1 ) {
+                kernel.priorityQueue.heap.splice(rem_i, 1);
+                kernel.priorityQueue.heapifyArray();
+            }
+        }
+
         // Sanity check
-        if ( params[0] in kernel.loadedProcesses ) {
+        if ( pid in kernel.loadedProcesses ) {
             kernel.trace("Context switch");
             if ( kernel.activeProcess ) {
                 // Save the active process
@@ -280,10 +310,17 @@ function Kernel( host ) {
                 kernel.activeProcess.state = 'ready';
                 // Move it onto the back of the ready queue
                 kernel.readyQueue.enqueue(kernel.activeProcess.PID);
+                // Put it in the priority queue
+                var pr_obj =
+                {
+                    'PID' : kernel.activeProcess.PID,
+                    'priority' : kernel.activeProcess.priority
+                };
+                kernel.priorityQueue.insert(pr_obj);
             }
 
             // Load the new registers
-            var proc = kernel.loadedProcesses[params[0]];
+            var proc = kernel.loadedProcesses[pid];
             proc.load();
             // Update the active process
             kernel.activeProcess = proc;
@@ -387,6 +424,14 @@ Kernel.prototype.queueProgram = function( pid ) {
 
     // Put the program in the ready queue
     this.readyQueue.enqueue(pid);
+
+    // Put it in the priority queue
+    var pr_obj =
+    {
+        'PID' : pid,
+        'priority' : this.loadedProcesses[pid].priority
+    };
+    this.priorityQueue.insert(pr_obj);
 
     if ( !this.activeProcess ) {
         // Make a decision now, if no active program
@@ -534,14 +579,27 @@ Kernel.prototype.freeProcess = function( pid ) {
     this.MMU.freeMem(this.loadedProcesses[pid],
             this.loadedProcesses[pid].memLimit);
 
-    // Remove the process from the resident queue
-    delete this.loadedProcesses[pid];
-
     var rindex = this.readyQueue.q.indexOf(pid);
+
     if ( rindex > -1 ) {
         // Remove it from the ready queue
         this.readyQueue.q.splice(rindex, 1);
     }
+
+    // Remove it from the priority queue
+    var pr_obj =
+    {
+        'PID' : pid,
+        'priority' : this.loadedProcesses[pid].priority
+    };
+    var rem_i = this.priorityQueue.heap.indexOf(pr_obj);
+    if ( rem_i != -1 ) {
+        this.priorityQueue.heap.splice(rem_i, 1);
+        this.priorityQueue.heapifyArray();
+    }
+
+    // Remove the process from the resident queue
+    delete this.loadedProcesses[pid];
 
     if ( this.activeProcess && ( pid == this.activeProcess.PID ) ) {
         // No active process now
