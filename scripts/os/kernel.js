@@ -257,7 +257,7 @@ function Kernel( host ) {
     };
 
     // Set up a new short-term scheduler
-    this.shortTermSched = new STS(this.readyQueue, ctxt_switcher,
+    this.shortTermSched = new STS(this.readyQueue, undefined, ctxt_switcher,
             cpu_t_updater, tracer);
 
     // Handles the CPU interrupt and executes scheduling decisions

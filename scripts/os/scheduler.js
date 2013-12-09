@@ -9,6 +9,10 @@
  * 
  * @param readyQueue
  *            A program ready queue storing processes waiting to be executed
+ * @param priorityQueue
+ *            A program ready queue storing processes waiting to be executed,
+ *            ordered by priority. The STS assumes that this is kept in sync
+ *            with the readyQueue.
  * @param ctxt_switch_handler
  *            A function that handles context switches. The scheduler will pass
  *            in the program that should be switched to.
@@ -18,9 +22,11 @@
  * @param tracer
  *            An optional function to handle tracing messages
  */
-function STS( readyQueue, ctxt_switch_handler, timer_updater, tracer ) {
+function STS( readyQueue, priorityQueue, ctxt_switch_handler, timer_updater,
+        tracer ) {
     // Hookup the API
     this.readyQueue = readyQueue;
+    this.priorityQueue = priorityQueue;
     this.contextSwitchHandler = ctxt_switch_handler;
     this.updateTimer = timer_updater;
     this.trace = tracer;
@@ -59,6 +65,17 @@ STS.prototype.decide = function( ) {
         // Do the switch
         if ( this.readyQueue.getSize() > 0 ) {
             this.contextSwitchHandler(this.readyQueue.dequeue());
+        }
+    }
+    else if ( this.mode === 'Priority' ) {
+        // Non-preemptive
+        this.updateTimer(-1);
+        if ( this.trace )
+            this.trace("Priority Switch");
+
+        if ( this.priorityQueue.getSize() > 0 ) {
+            // Select the next highest priority item and switch to it
+            this.contextSwitchHandler(this.priorityQueue.remove());
         }
     }
 };

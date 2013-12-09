@@ -22,7 +22,7 @@
  *            be supplied with a single argument: an associative array with the
  *            same format as above.
  */
-function PCB( pid, code_load_fn, register_read_fn, register_write_fn ) {
+function PCB( pid, code_load_fn, register_read_fn, register_write_fn, priority ) {
 
     /*
      * One of new, ready, running, waiting, failed, done
@@ -49,7 +49,12 @@ function PCB( pid, code_load_fn, register_read_fn, register_write_fn ) {
     this.registerRead = register_read_fn;
     // Kernel-provided function to write to the register state
     this.registerWrite = register_write_fn;
-    this.IOWait = false; // not waiting for I/O
+    // not waiting for I/O
+    this.IOWait = false;
+
+    // Priority
+    this.priority = ( priority === undefined || priority > 255 ) ? 255
+            : priority;
 
     // No allocated pages yet
     this.pageList = [ ];
@@ -145,6 +150,9 @@ PCB.prototype.display = function( output ) {
     output.advanceLine();
 
     output.putText("       state: " + this.state);
+    output.advanceLine();
+
+    output.putText("    priority: " + this.priority);
     output.advanceLine();
 
     output.putText("    pages: " + this.pageList);
