@@ -283,6 +283,7 @@ MMU.prototype.freeMem = function( pcb, bytes ) {
             // Page is on disk
             // get the disk key and free the disk space
             this.releasePage(this.backedMap[page]);
+            console.log("disk free");
             // Remove it from the list of disk-backed pages
             delete this.backedMap[page];
         }
@@ -305,11 +306,6 @@ MMU.prototype.translate = function( pcb, addr ) {
     // See if in physical memory
     if ( !( pageID in this.cachedMap ) ) {
         // Need to swap in from disk
-        // Select a random page
-        var victim = Math.floor(Math.random()
-                * Object.keys(this.cachedMap).length);
-        // kill it, back to disk
-        victim = Object.keys(this.cachedMap)[victim];
 
         // Get the backing store key
         var backedKey = this.backedMap[pageID];
@@ -317,49 +313,73 @@ MMU.prototype.translate = function( pcb, addr ) {
         // Store the incoming program's data from the backing store
         var incoming = this.backedRead(backedKey);
 
-        // Read the outgoing data cached in physical memory
-        // Get the page start address
-        memaddr = this.pageAddresses[this.cachedMap[victim]];
-        var outgoing = [ ];
-        for ( var i = 0; i < this.PAGE_SIZE; ++i ) {
-            // Read byte
-            outgoing[i] = this.memory.read(memaddr);
-            // Move up a byte
-            ++memaddr;
+        var victim = undefined;
+        var new_free_page, new_addr;
+
+        // See if there is a victim to choose
+        if ( Object.keys(this.cachedMap).length > 0 ) {
+            // Select a random page
+            victim = Math.floor(Math.random()
+                    * Object.keys(this.cachedMap).length);
+            // kill it, back to disk
+            victim = Object.keys(this.cachedMap)[victim];
+
+            // Read the outgoing data cached in physical memory
+            // Get the page start address
+            new_free_page = this.cachedMap[victim];
+            new_addr = this.pageAddresses[new_free_page];
+
+            memaddr = new_addr;
+            var outgoing = [ ];
+            for ( var i = 0; i < this.PAGE_SIZE; ++i ) {
+                // Read byte
+                outgoing[i] = this.memory.read(memaddr);
+                // Move up a byte
+                ++memaddr;
+            }
+
+            // Write page to backing store
+            // TODO Check for write success
+            this.backedWrite(backedKey, outgoing);
+
+            // Set victim to reference backing store
+            this.backedMap[victim] = backedKey;
+
+            // delete old reference to cached
+            delete this.cachedMap[victim];
+            // Okay so this isn't quite OO, but it's simple
+            // and permissible in this specific instance
+            // Set the PCB owning the victim as having something paged
+            var paged_pcb = this.owners[victim];
+            paged_pcb = this.getPcb(paged_pcb);
+            paged_pcb.state = "paged";
+        }
+        else {
+            // No programs in physical memory
+            // Get a physical page
+            new_free_page = this.freePages.shift();
+            new_addr = this.pageAddresses[new_free_page];
+
+            // Release disk space
+            this.releasePage(backedKey);
         }
 
-        // Write page to backing store
-        // TODO Check for write success
-        this.backedWrite(backedKey, outgoing);
-
         // Write incoming data to physical memory
-        memaddr = this.pageAddresses[this.cachedMap[victim]];
+        memaddr = new_addr;
         for ( var i = 0; i < this.PAGE_SIZE; ++i ) {
             this.memory.write(memaddr, incoming[i]);
             // Move up a byte
             ++memaddr;
         }
 
-        memaddr = this.pageAddresses[this.cachedMap[victim]];
         // Set pageID to be replaced page location
-        this.cachedMap[pageID] = this.cachedMap[victim];
-        // Set victim to reference backing store
-        this.backedMap[victim] = backedKey;
+        this.cachedMap[pageID] = new_free_page;
 
-        // delete old reference to cached
-        delete this.cachedMap[victim];
         // delete old reference to backed
         delete this.backedMap[pageID];
 
         if ( this.trace )
-            this.trace("Page swap physical: " + memaddr + " and " + backedKey);
-
-        // Okay so this isn't quite OO, but it's simple
-        // and permissible in this specific instance
-        // Set the PCB owning the victim as having something paged
-        var paged_pcb = this.owners[victim];
-        paged_pcb = this.getPcb(paged_pcb);
-        paged_pcb.state = "paged";
+            this.trace("Page swap physical: " + new_addr + " and " + backedKey);
 
         // Update the current PCB
         // Set this as being unpaged, since we're doing this in translate
