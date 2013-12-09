@@ -406,6 +406,10 @@ FileSystemDeviceDriver.prototype.write = function( addr, data ) {
     var datasets = [ ];
     var block_indexes = [ ];
 
+    if ( strToHex(addr.join('')) == this.INVALID_PNTR ) {
+        return false;
+    }
+
     // Create blocks of maximum data block size
     for ( var i = 0; i < data.length; i += this.DATA_PER_BLOCK ) {
         datasets.push(data.slice(i, i + this.DATA_PER_BLOCK));
