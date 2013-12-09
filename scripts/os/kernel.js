@@ -764,8 +764,6 @@ Kernel.prototype.allocateProgram = function( size ) {
     // Put the PCB in the resident list
     this.loadedProcesses[pid] = pcb;
     
-    console.log(pcb);
-
     return pcb;
 };
 

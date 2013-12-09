@@ -35,7 +35,7 @@ function MMU( access_violation_handler, pcb_lookup, memory, alloc, read, write,
     // Programs only get 256 bytes of mem
     this.PROGRAM_ALLOWED_MEM = 256;
     // 8 bytes per page
-    this.PAGE_SIZE = 8;
+    this.PAGE_SIZE = 256;
 
     // Kernel-supplied function for reacting to access violations
     this.accessViolationHandler = access_violation_handler;
@@ -225,6 +225,8 @@ MMU.prototype.allocateMem = function( pcb, bytes ) {
             // See if we could allocate enough room for a page
             if ( !write_success ) {
                 // need to walk back
+                console.log("alloc write fail");
+                console.log(backed);
                 break;
             }
 
@@ -310,7 +312,7 @@ MMU.prototype.translate = function( pcb, addr ) {
 
         // Read the outgoing data cached in physical memory
         // Get the page start address
-        memaddr = this.cachedMap[victim];
+        memaddr = this.pageAddresses[this.cachedMap[victim]];
         var outgoing = [ ];
         for ( var i = 0; i < this.PAGE_SIZE; ++i ) {
             // Read byte
@@ -324,7 +326,7 @@ MMU.prototype.translate = function( pcb, addr ) {
         this.backedWrite(backedKey, outgoing);
 
         // Write incoming data to physical memory
-        memaddr = this.cachedMap[victim];
+        memaddr = this.pageAddresses[this.cachedMap[victim]];
         for ( var i = 0; i < this.PAGE_SIZE; ++i ) {
             this.memory.write(memaddr, incoming[i]);
             // Move up a byte
