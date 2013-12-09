@@ -332,10 +332,14 @@ function Shell( kernel ) {
     sc.description = ' - executes all loaded programs';
     sc.action = function( args ) {
         var pids = Object.keys(shell.kernel.loadedProcesses);
-        pids.sort();
         pids = pids.map(function( id ) {
             return parseInt(id);
         });
+
+        var sortbyfuckingintegernotascii = function( a, b ) {
+            return ( a == b ) ? 0 : ( a < b ) ? -1 : 1;
+        };
+        pids = pids.sort(sortbyfuckingintegernotascii);
 
         if ( pids.length == 0 ) {
             shell.stdOut.putText("No loaded processes");
