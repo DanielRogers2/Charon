@@ -288,12 +288,13 @@ function Kernel( host ) {
             // It came from the ready queue
             pid = params[0];
             // Remove it from the priority queue
-            var pr_obj =
-            {
-                'PID' : pid,
-                'priority' : kernel.loadedProcesses[pid].priority
-            };
-            var rem_i = kernel.priorityQueue.heap.indexOf(pr_obj);
+            var rem_i = -1;
+            for ( var i = 0; i < kernel.priorityQueue.heap.length; ++i ) {
+                if ( kernel.priorityQueue.heap[i].PID == pid ) {
+                    rem_i = i;
+                    break;
+                }
+            }
             if ( rem_i != -1 ) {
                 kernel.priorityQueue.heap.splice(rem_i, 1);
                 kernel.priorityQueue.heapifyArray();
@@ -435,7 +436,10 @@ Kernel.prototype.queueProgram = function( pid ) {
 
     if ( !this.activeProcess ) {
         // Make a decision now, if no active program
-        this.shortTermSched.decide();
+        this.activeProcess = this.loadedProcesses[this.shortTermSched
+                .startNext()];
+        this.activeProcess.load();
+        this.CPU.isExecuting = true;
     }
     else {
         this.host.updateRQDisplay();
@@ -587,12 +591,13 @@ Kernel.prototype.freeProcess = function( pid ) {
     }
 
     // Remove it from the priority queue
-    var pr_obj =
-    {
-        'PID' : pid,
-        'priority' : this.loadedProcesses[pid].priority
-    };
-    var rem_i = this.priorityQueue.heap.indexOf(pr_obj);
+    var rem_i = -1;
+    for ( var i = 0; i < this.priorityQueue.heap.length; ++i ) {
+        if ( this.priorityQueue.heap[i].PID == pid ) {
+            rem_i = i;
+            break;
+        }
+    }
     if ( rem_i != -1 ) {
         this.priorityQueue.heap.splice(rem_i, 1);
         this.priorityQueue.heapifyArray();
@@ -608,6 +613,7 @@ Kernel.prototype.freeProcess = function( pid ) {
         this.CPU.isExecuting = false;
         this.shortTermSched.decide();
     }
+
     // Update display
     this.host.updateRQDisplay();
 };

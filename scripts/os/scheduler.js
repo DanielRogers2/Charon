@@ -83,3 +83,50 @@ STS.prototype.decide = function( ) {
         }
     }
 };
+
+/**
+ * Gets the next program according to the schedule and configures the CPU
+ * 
+ * The caller is responsible for executing the program appropriately
+ * 
+ * @return the process ID of the next program to run
+ */
+STS.prototype.startNext = function( ) {
+    if ( this.mode === 'rr' ) {
+        // No process running, or our quantum was triggered
+        if ( this.trace )
+            this.trace("RR Switch");
+        
+        // Set the timer to next decision
+        this.updateTimer(this.quantum);
+
+        // The quantum says to switch
+        if ( this.readyQueue.getSize() > 0 ) {
+            // There is a program to switch to
+            // Set up the context switch
+            return this.readyQueue.dequeue();
+        }
+    }
+    else if ( this.mode === 'fcfs' ) {
+        // Never cause a timer trigger
+        this.updateTimer(-1);
+        if ( this.trace )
+            this.trace("FCFS Switch");
+
+        // Do the switch
+        if ( this.readyQueue.getSize() > 0 ) {
+            return this.readyQueue.dequeue();
+        }
+    }
+    else if ( this.mode === 'priority' ) {
+        // Non-preemptive
+        this.updateTimer(-1);
+        if ( this.trace )
+            this.trace("Priority Switch");
+
+        if ( this.priorityQueue.getSize() > 0 ) {
+            // Select the next highest priority item and switch to it
+            return this.priorityQueue.remove();
+        }
+    }
+};

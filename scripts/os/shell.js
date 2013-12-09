@@ -329,14 +329,16 @@ function Shell( kernel ) {
     sc.command = 'runall';
     sc.description = ' - executes all loaded programs';
     sc.action = function( args ) {
-        var loaded = false;
-        for ( var pid in shell.kernel.loadedProcesses ) {
-            shell.kernel.queueProgram(pid);
-            loaded = true;
-        }
+        var pids = Object.keys(shell.kernel.loadedProcesses);
+        pids.sort();
 
-        if ( !loaded ) {
+        if ( pids.length == 0 ) {
             shell.stdOut.putText("No loaded processes");
+        }
+        else {
+            for ( var i = 0; i < pids.length; ++i ) {
+                shell.kernel.queueProgram(pids[i]);
+            }
         }
     };
     this.commandList[this.commandList.length] = sc;
