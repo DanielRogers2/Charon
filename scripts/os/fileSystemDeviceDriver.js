@@ -742,14 +742,23 @@ FileSystemDeviceDriver.prototype.format = function( ) {
     var tag_blocks = function( tstart, sstart, bstart, tend ) {
         var free_next;
 
+        var t_next;
+        var s_next;
+        var b_next;
+
         // Write to each track in range
         for ( var t = tstart; t < tend; ++t ) {
             // Write to each sector
             for ( var s = sstart; s < self.HDD.SECTORS; ++s ) {
                 // Write to each block in sector
                 for ( var b = bstart; b < self.HDD.BLOCKS; ++b ) {
+                    // Compute pointers to next
+                    b_next = ( b + 1 ) % self.HDD.BLOCKS;
+                    s_next = ( b == 0 ) ? ( s + 1 ) % self.HDD.SECTORS : s;
+                    t_next = ( b == 0 && s == 0 ) ? t + 1 : t;
+
                     // Get the pointer to the next block
-                    free_next = [ t, s, ( b + 1 ) % self.HDD.BLOCKS ];
+                    free_next = [ t_next, s_next, b_next ];
                     // Add an EOF
                     free_next = strToHex(free_next.join('')) + self.EOF;
 
