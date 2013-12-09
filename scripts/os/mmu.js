@@ -35,7 +35,7 @@ function MMU( access_violation_handler, pcb_lookup, memory, alloc, read, write,
     // Programs only get 256 bytes of mem
     this.PROGRAM_ALLOWED_MEM = 256;
     // 8 bytes per page
-    this.PAGE_SIZE = 256;
+    this.PAGE_SIZE = 8;
 
     // Kernel-supplied function for reacting to access violations
     this.accessViolationHandler = access_violation_handler;

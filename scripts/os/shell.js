@@ -586,6 +586,8 @@ function Shell( kernel ) {
     sc.description = ' formats the disk';
     sc.action = function( args ) {
         shell.kernel.fsDriver.format();
+        // Clear loaded programs
+        shell.kernel.kernel.loadedProcesses = { };
     };
     this.commandList[this.commandList.length] = sc;
 
