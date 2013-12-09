@@ -754,8 +754,8 @@ FileSystemDeviceDriver.prototype.format = function( ) {
                 for ( var b = bstart; b < self.HDD.BLOCKS; ++b ) {
                     // Compute pointers to next
                     b_next = ( b + 1 ) % self.HDD.BLOCKS;
-                    s_next = ( b == 0 ) ? ( s + 1 ) % self.HDD.SECTORS : s;
-                    t_next = ( b == 0 && s == 0 ) ? t + 1 : t;
+                    s_next = ( b_next == 0 ) ? ( s + 1 ) % self.HDD.SECTORS : s;
+                    t_next = ( b_next == 0 && s_next == 0 ) ? t + 1 : t;
 
                     // Get the pointer to the next block
                     free_next = [ t_next, s_next, b_next ];
