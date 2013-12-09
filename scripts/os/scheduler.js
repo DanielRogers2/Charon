@@ -31,8 +31,12 @@ function STS( readyQueue, priorityQueue, ctxt_switch_handler, timer_updater,
     this.updateTimer = timer_updater;
     this.trace = tracer;
 
+    this.DEFAULT_MODE = 'rr';
+
+    this.SCHEDULING_CHOICES = [ "rr", "fcfs", "priority" ];
+
     // Nothing to set this too yet, but why not have it
-    this.mode = 'RoundRobin';
+    this.mode = 'rr';
 
     // Default is 6 clock ticks/switch
     this.DEFAULT_QUANTUM = 6;
@@ -42,7 +46,7 @@ function STS( readyQueue, priorityQueue, ctxt_switch_handler, timer_updater,
 
 // Make a scheduling decision
 STS.prototype.decide = function( ) {
-    if ( this.mode === 'RoundRobin' ) {
+    if ( this.mode === 'rr' ) {
         // No process running, or our quantum was triggered
         if ( this.trace )
             this.trace("RR Switch");
@@ -56,7 +60,7 @@ STS.prototype.decide = function( ) {
         // Set the timer to next decision
         this.updateTimer(this.quantum);
     }
-    else if ( this.mode === 'FCFS' ) {
+    else if ( this.mode === 'fcfs' ) {
         // Never cause a timer trigger
         this.updateTimer(-1);
         if ( this.trace )
@@ -67,7 +71,7 @@ STS.prototype.decide = function( ) {
             this.contextSwitchHandler(this.readyQueue.dequeue());
         }
     }
-    else if ( this.mode === 'Priority' ) {
+    else if ( this.mode === 'priority' ) {
         // Non-preemptive
         this.updateTimer(-1);
         if ( this.trace )

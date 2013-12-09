@@ -225,8 +225,8 @@ function Shell( kernel ) {
      */
     sc = new ShellCommand();
     sc.command = 'load';
-    sc.description = ' - loads a program from the program entry';
-    sc.action = function( ) {
+    sc.description = ' <priority> - loads a program from the program entry';
+    sc.action = function( args ) {
         // Validate hex and load
         var rawProg = document.getElementById("taProgramInput").value;
 
@@ -253,8 +253,12 @@ function Shell( kernel ) {
                 progBytes[i / 2] = rawProg.slice(i, i + 2);
             }
 
+            // See if a priority was passed in
+            var prior = ( args && args.length > 0 ) ? parseInt(args[0])
+                    : undefined;
+
             // Create process control block
-            var pcb = shell.kernel.allocateProgram(-1);
+            var pcb = shell.kernel.allocateProgram(-1, prior);
 
             if ( !pcb ) {
                 // Kernel couldn't create the PCB
@@ -344,7 +348,10 @@ function Shell( kernel ) {
     sc.command = 'quantum';
     sc.description = ' - sets the number of CPU cycles for RR scheduling (default == 6)';
     sc.action = function( args ) {
-        if ( args[0] === 'default' ) {
+        if ( !args ) {
+            shell.stdOut.putText("Please supply a quantum");
+        }
+        else if ( args[0] === 'default' ) {
             shell.kernel.shortTermSched.quantum = shell.kernel.shortTermSched.DEFAULT_QUANTUM;
             shell.stdOut.putText("Reset quantum to default");
         }
@@ -354,6 +361,31 @@ function Shell( kernel ) {
         }
         else {
             shell.stdOut.putText("Invalid quantum");
+        }
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Sets the scheduling type
+     */
+    sc = new ShellCommand();
+    sc.command = 'setschedule';
+    sc.description = ' - sets the scheduling type, choices: [rr, fcfs, priority], default == rr';
+    sc.action = function( args ) {
+        if ( !args ) {
+            shell.stdOut.putText("Please supply a mode");
+        }
+        else if ( args[0] === 'default' ) {
+            shell.kernel.shortTermSched.mode = shell.kernel.shortTermSched.DEFAULT_MODE;
+            shell.stdOut.putText("Reset mode to default");
+        }
+        else if ( shell.kernel.shortTermSched.SCHEDULING_CHOICES
+                .indexOf(args[0]) != -1 ) {
+            shell.kernel.shortTermSched.mode = args[0];
+            shell.stdOut.putText("Set mode to: " + args[0]);
+        }
+        else {
+            shell.stdOut.putText("Invalid mode");
         }
     };
     this.commandList[this.commandList.length] = sc;

@@ -763,7 +763,7 @@ Kernel.prototype.timerISR = function( params ) {
  * @returns {PCB} A new process control block with allocated memory <size> or
  *          undefined if the kernel cannot generate a new PCB.
  */
-Kernel.prototype.allocateProgram = function( size ) {
+Kernel.prototype.allocateProgram = function( size, priority ) {
 
     var memsize = ( size === -1 ) ? this.MMU.PROGRAM_ALLOWED_MEM : size;
 
@@ -806,7 +806,7 @@ Kernel.prototype.allocateProgram = function( size ) {
         kernel.CPU.Yreg = regs['Yreg'];
         kernel.CPU.Zflag = regs['Zflag'];
     };
-    var pcb = new PCB(pid, code_loader, reg_read, reg_write);
+    var pcb = new PCB(pid, code_loader, reg_read, reg_write, priority);
 
     // Allocate memory for the process
     var success = this.MMU.allocateMem(pcb, memsize);

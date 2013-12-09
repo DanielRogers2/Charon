@@ -224,6 +224,10 @@ MinHeap.prototype.size = function( ) {
     return this.heap.length;
 };
 
+MinHeap.prototype.getSize = function( ) {
+    return this.size();
+};
+
 /*
  * Decrement all keys in heap @author Daniel Rogers
  */
