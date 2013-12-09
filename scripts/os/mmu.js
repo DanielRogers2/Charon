@@ -30,12 +30,12 @@
  *            backing store key
  */
 function MMU( access_violation_handler, pcb_lookup, memory, alloc, read, write,
-        release ) {
+        release, trace_fn ) {
 
     // Programs only get 256 bytes of mem
     this.PROGRAM_ALLOWED_MEM = 256;
-    // 8 bytes per page
-    this.PAGE_SIZE = 8;
+    // 8 bytes per page is a lot faster because less swapping
+    this.PAGE_SIZE = 256;
 
     // Kernel-supplied function for reacting to access violations
     this.accessViolationHandler = access_violation_handler;
@@ -53,6 +53,9 @@ function MMU( access_violation_handler, pcb_lookup, memory, alloc, read, write,
     // Kernel-supplied access to file release
     this.releasePage = release;
 
+    // Message tracing utility
+    this.trace = trace_fn;
+
     // Just an incremental counter for page #'s
     this.next_page = 0;
 
@@ -69,6 +72,9 @@ function MMU( access_violation_handler, pcb_lookup, memory, alloc, read, write,
     // Mapping of page values to values on the backing store
     // A map of page# ==> backing store key
     this.backedMap = { };
+
+    // Mapping of pages to owning PID's
+    this.owners = { };
 
     // A zero-page, for use during virtual memory allocation
     this.zero_page = [ ];
@@ -200,6 +206,7 @@ MMU.prototype.allocateMem = function( pcb, bytes ) {
 
             // Store page in pcb
             pcb.pageList.push(pageId);
+            this.owners[pageId] = pcb.PID;
         }
     }
 
@@ -333,6 +340,7 @@ MMU.prototype.translate = function( pcb, addr ) {
             ++memaddr;
         }
 
+        memaddr = this.pageAddresses[this.cachedMap[victim]];
         // Set pageID to be replaced page location
         this.cachedMap[pageID] = this.cachedMap[victim];
         // Set victim to reference backing store
@@ -342,6 +350,21 @@ MMU.prototype.translate = function( pcb, addr ) {
         delete this.cachedMap[victim];
         // delete old reference to backed
         delete this.backedMap[pageID];
+
+        if ( this.trace )
+            this.trace("Page swap physical: " + memaddr + " and " + backedKey);
+
+        // Okay so this isn't quite OO, but it's simple
+        // and permissible in this specific instance
+        // Set the PCB owning the victim as having something paged
+        var paged_pcb = this.owners[victim];
+        paged_pcb = this.getPcb(paged_pcb);
+        paged_pcb.state = "paged";
+
+        // Update the current PCB
+        // Set this as being unpaged, since we're doing this in translate
+        // the process being passed in should* be the active process
+        pcb.state = "running";
     }
 
     // Get page start

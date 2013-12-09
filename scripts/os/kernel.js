@@ -511,7 +511,7 @@ Kernel.prototype.programCleanup = function( ) {
     this.activeProcess.synchronize();
 
     // Print out the state information
-    //this.activeProcess.display(this.stdOut);
+    // this.activeProcess.display(this.stdOut);
     this.shell.prompt();
 
     // Disable step button on program exit if it was being stepped through
@@ -763,7 +763,7 @@ Kernel.prototype.allocateProgram = function( size ) {
 
     // Put the PCB in the resident list
     this.loadedProcesses[pid] = pcb;
-    
+
     return pcb;
 };
 
