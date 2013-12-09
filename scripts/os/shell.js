@@ -600,6 +600,8 @@ function Shell( kernel ) {
         var files = shell.kernel.fsDriver.file_list;
         for ( file in files ) {
             // Put them out one by one
+            shell.stdOut.putText("File listing:");
+            shell.stdOut.advanceLine();
             shell.stdOut.putText(file);
             shell.stdOut.advanceLine();
         }
@@ -614,6 +616,24 @@ function Shell( kernel ) {
     sc.description = ' - crashes';
     sc.action = function( ) {
         shell.kernel.trapError("forced crash");
+    };
+    this.commandList[this.commandList.length] = sc;
+
+    /*
+     * Load default program
+     */
+    sc = new ShellCommand();
+    sc.command = 'prg1';
+    sc.description = ' - stuff';
+    sc.action = function( ) {
+        var prog = "A9 00 8D 7B 00 A9 00 8D 7B 00 A9 00 8D 7C 00 A9 00 8D 7C"
+                + "00 A9 01 8D 7A 00 A2 00 EC 7A 00 D0 39 A0 7D A2 02 FF AC "
+                + "7B 00 A2 01 FF AD 7B 00 8D 7A 00 A9 01 6D 7A 00 8D 7B 00 "
+                + "A9 09 AE 7B 00 8D 7A 00 A9 00 EC 7A 00 D0 02 A9 01 8D 7A "
+                + "00 A2 01 EC 7A 00 D0 05 A9 01 8D 7C 00 A9 00 AE 7C 00 8D "
+                + "7A 00 A9 00 EC 7A 00 D0 02 A9 01 8D 7A 00 A2 00 EC 7A 00 "
+                + "D0 AC A0 7F A2 02 FF 00 00 00 00 63 00 63 64 6F 6E 65 00";
+        document.getElementById("taProgramInput").value = prog;
     };
     this.commandList[this.commandList.length] = sc;
 

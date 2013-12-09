@@ -159,7 +159,7 @@ MMU.prototype.zeroMem = function( pcb ) {
         pageId = pcb.pageList[i];
         if ( pageId in this.cachedMap ) {
             // zero physical memory
-            zero(this.cachedMap[pageId]);
+            zero(this.pageAddresses[this.cachedMap[pageId]]);
         }
         else {
             // Zero backing store
@@ -189,14 +189,14 @@ MMU.prototype.allocateMem = function( pcb, bytes ) {
     var allocd = 0;
 
     // See if there is free physical memory
-    if ( Object.keys(this.cachedMap).length < this.freePages.length ) {
+    if ( Object.keys(this.cachedMap).length < this.pageAddresses.length ) {
         // Less pages cached in physical memory than free Pages
-        for ( ; allocd < bytes && this.freePages.length; allocd += this.PAGE_SIZE ) {
+        for ( ; ( allocd < bytes ) && this.freePages.length; allocd += this.PAGE_SIZE ) {
             // Add pages until out of cache-able memory, or all bytes written
 
             // Map page# to freePage index
             var pageId = this.nextPage();
-            this.cachedMap[pageID] = this.freePages.shift();
+            this.cachedMap[pageId] = this.freePages.shift();
 
             // Store page in pcb
             pcb.pageList.push(pageId);
@@ -343,7 +343,8 @@ MMU.prototype.translate = function( pcb, addr ) {
     }
 
     // Get page start
-    memaddr = this.cachedMap[pageID];
+    memaddr = this.pageAddresses[this.cachedMap[pageID]];
+
     // Offset into page
     memaddr += addr % this.PAGE_SIZE;
 
